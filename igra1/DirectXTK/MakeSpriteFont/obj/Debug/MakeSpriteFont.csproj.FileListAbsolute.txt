@@ -1,0 +1,5 @@
+D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\bin\Debug\MakeSpriteFont.exe
+D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\bin\Debug\MakeSpriteFont.pdb
+D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.csprojResolveAssemblyReference.cache
+D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.exe
+D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.pdb
