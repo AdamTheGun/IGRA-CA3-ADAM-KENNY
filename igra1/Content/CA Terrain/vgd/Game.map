@@ -1,0 +1,52 @@
+colorMapSize 256
+lightMapSize 256
+detailMapSize 256
+detailScales 10.000000 10.000000 10.000000 10.000000
+shadowDist 63.000000
+shadowFalloff 0.780000
+enableShadows 1
+lightMapBlur 0.280000
+colorMode 1
+undergroundMaterial 4291611852
+detailtexture1 "C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Seamless_Grass.bmp"
+detailtexture2 "C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Seamless_Rock.bmp"
+detailtexture3 "C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Seamless_DirtPath.bmp"
+detailtexture4 "C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Seamless_DarkRock.bmp"
+detailtexture5 "[HOME]Data\Textures\default5.tga"
+detailtexture6 "[HOME]Data\Textures\default6.tga"
+detailtexture7 "[HOME]Data\Textures\default7.tga"
+detailtexture8 "[HOME]Data\Textures\default8.tga"
+paintMaterial1 4294967295 "[HOME]Textures\brownsand.png"
+paintMaterial2 4281882314
+paintMaterial3 4294967295 "[HOME]Textures\packDirt.png"
+paintMaterial4 4294967295 "[HOME]Textures\cliff.png"
+paintMaterial5 4282134033
+paintMaterial6 4294967295 "[HOME]Textures\packDirt.png"
+mapname "Game"
+lightDirection -0.021104 0.636258 0.771188
+ambient 4283190348
+light 4291611852
+mapHeight 65.000000
+divisions 0
+fog 1
+fogNear 50.000000
+fogFar 3900.000000
+fogColor 4291611852
+background 4291611852
+renderUnderGround 1
+underGroundStretch 1
+underGroundScale 10.000000
+waterEnable 0
+waterHeight 20.000000
+waterScale 100.000000
+waterOpacity 0.750000
+waterDistortion 0.500000
+waterRefraction 0.500000
+waterSpeed 2.000000
+waterColor 4289387263
+SkyBoxBack 4294967295
+SkyBoxDown 4294967295
+SkyBoxFront 4294967295
+SkyBoxLeft 4294967295
+SkyBoxRight 4294967295
+SkyBoxUp 4294967295

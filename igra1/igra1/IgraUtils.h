@@ -122,6 +122,7 @@ std::wstring RemoveFileExtention(const std::wstring& filename);
 float randf();	///< random number 0..1
 float randf(float a, float b);	///< random number a..b
 
+
 /** Code to report memory leaks.
 Simply add this code at the beginning of Winmain
 \code

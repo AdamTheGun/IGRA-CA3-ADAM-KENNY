@@ -3,3 +3,8 @@ D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\bin\Debug\MakeSpriteFont.pdb
 D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.csprojResolveAssemblyReference.cache
 D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.exe
 D:\Work\IGRA\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.pdb
+C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\DirectXTK\MakeSpriteFont\bin\Debug\MakeSpriteFont.exe
+C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\DirectXTK\MakeSpriteFont\bin\Debug\MakeSpriteFont.pdb
+C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.csprojResolveAssemblyReference.cache
+C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.exe
+C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\DirectXTK\MakeSpriteFont\obj\Debug\MakeSpriteFont.pdb

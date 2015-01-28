@@ -1,1 +1,6 @@
-﻿
+﻿  Task8.cpp
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task08\task8.cpp(92): warning C4018: '<' : signed/unsigned mismatch
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task08\task8.cpp(98): warning C4018: '<' : signed/unsigned mismatch
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task08\task8.cpp(140): warning C4305: '=' : truncation from 'double' to 'float'
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task08\task8.cpp(236): warning C4244: '=' : conversion from 'double' to 'float', possible loss of data
+  Task8.vcxproj -> C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Debug\Task8.exe

@@ -1,0 +1,5 @@
+﻿  Task12a.cpp
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task12\task12a.cpp(71): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task12\task12a.cpp(72): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task12\task12a.cpp(73): warning C4244: 'initializing' : conversion from 'int' to 'float', possible loss of data
+  Task12.vcxproj -> C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Debug\Task12.exe

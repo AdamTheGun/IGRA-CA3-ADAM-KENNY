@@ -13,6 +13,7 @@
 #include "SpriteBatch.h" 
 #include "SpriteFont.h"
 #include "Draw3D.h"
+#include "Terrain.h"
 
 #include "Vertex.h"	// the IGRA vertex structures
 
@@ -45,6 +46,9 @@ class MyApp:public App
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 
 	ArcBallCamera mCamera;
+	
+	std::unique_ptr<Terrain> mpTerrain;
+	TerrainMaterial mTerrainMat;
 };
 
 void MyApp::Startup()
@@ -58,6 +62,21 @@ void MyApp::Startup()
 	// initial pos/tgt for camera
 	mCamera.Reset();
 
+	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game.bmp",
+                            Vector3(1,0.3f,1)));
+	mTerrainMat.mpShaderManager=mpShaderManager.get();
+	mTerrainMat.mpTexBase.Attach(CreateTextureResourceWIC(GetDevice(),
+                          L"../Content/CA Terrain/Game_d.png"));
+
+	std::vector<std::wstring> textures;
+	textures.push_back(L"../Content/CA Terrain/Seamless_Grass.bmp");
+	textures.push_back(L"../Content/CA Terrain/Seamless_Rock.bmp");
+	textures.push_back(L"../Content/CA Terrain/Seamless_DirtPath.bmp");
+	textures.push_back(L"../Content/CA Terrain/Seamless_DarkRock.bmp");
+
+	mTerrainMat.mpTexLayerArray.Attach(CreateTexture2DArray(GetDevice(),GetContext(),textures));
+	mTerrainMat.mpTexLight.Attach(CreateTextureResourceWIC(
+                               GetDevice(),L"../Content/CA Terrain/Game_l.png"));
 	// load models:
 	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/skull.obj",
                          true);
@@ -96,6 +115,7 @@ void MyApp::Startup()
 	// make it:
 	GetDevice()->CreateDepthStencilState(&dsd,&mpShadowStencil);
 
+	
 
 	mSkyObj.mMaterial.mpVS=mpShaderManager->VSSkybox();
 	mSkyObj.mMaterial.mpLayout=mpShaderManager->LayoutSkybox();
@@ -136,7 +156,15 @@ void MyApp::Draw()
 	mPlane.mMaterial.Apply(GetContext());
 	mPlane.Draw(GetContext());
 
+	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
+
+	world= Matrix::CreateTranslation(0,-20,0);
+	mTerrainMat.FillMatrixes(world,view,proj);
+	mTerrainMat.Apply(GetContext());
+	mpTerrain->Draw(GetContext());
+	mpTerrain->Draw(GetContext());
+
 
 	world=Matrix::CreateTranslation(0,0,0);
 	mTeapot.mMaterial.FillMatrixes(world,view,proj);
@@ -154,7 +182,7 @@ void MyApp::Draw()
 	mSkyObj.Draw(GetContext());
 	// Present the backbuffer to the screen
 
-	
+
 	GetSwapChain()->Present(0, 0);
 
 }

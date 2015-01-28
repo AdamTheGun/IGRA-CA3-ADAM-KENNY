@@ -113,7 +113,7 @@ float Terrain::GetHeight(float x, float z)
 	int col = (int)floorf(c);
 
 	// range check for sanity:
-	if (row<0 || row>=mTerrainWidth || col<0 || col>=mTerrainHeight)
+	if (row<0 || row>=mTerrainWidth-1 || col<0 || col>=mTerrainHeight-1)
        	return 0;
 
 	// Grab the heights of the cell we are in.
