@@ -12,6 +12,7 @@
 #include "SimpleMathToString.h"
 #include "SpriteBatch.h" 
 #include "SpriteFont.h"
+
 #include "Draw3D.h"
 #include "Terrain.h"
 
@@ -32,7 +33,7 @@ class MyApp:public App
 	void Startup();
 	void Update();
 	void Draw();
-	//void Shutdown();	
+	void Shutdown();	
 
 	// shader manager: handles VS,PS, layouts & constant buffers
 	std::unique_ptr<ShaderManager> mpShaderManager;
@@ -40,11 +41,10 @@ class MyApp:public App
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
 	ModelObj mTeapot,mPlane,mSkyObj;
-	
 	void DrawShadows(const Matrix& view,const Matrix& proj) ;
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
-
+	
 	ArcBallCamera mCamera;
 	
 	std::unique_ptr<Terrain> mpTerrain;
@@ -54,7 +54,7 @@ class MyApp:public App
 void MyApp::Startup()
 {
 	// set the title (needs the L"..." because of Unicode)
-	mTitle=L"Task 6a: Model Loading";
+	mTitle=L"Task 11: BUILDING";
 
 	// just create the Shader Manager
 	mpShaderManager.reset(new ShaderManager(GetDevice()));
@@ -62,8 +62,10 @@ void MyApp::Startup()
 	// initial pos/tgt for camera
 	mCamera.Reset();
 
-	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game.bmp",
-                            Vector3(1,0.3f,1)));
+//	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game.bmp",
+      //                     Vector3(1,0.3f,1)));
+	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game2.bmp",
+                            Vector3(2,0.3f,2)));
 	mTerrainMat.mpShaderManager=mpShaderManager.get();
 	mTerrainMat.mpTexBase.Attach(CreateTextureResourceWIC(GetDevice(),
                           L"../Content/CA Terrain/Game_d.png"));
@@ -78,7 +80,7 @@ void MyApp::Startup()
 	mTerrainMat.mpTexLight.Attach(CreateTextureResourceWIC(
                                GetDevice(),L"../Content/CA Terrain/Game_l.png"));
 	// load models:
-	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/skull.obj",
+	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/Mech-Mk1.obj",
                          true);
 	mPlane.Load(GetDevice(),mpShaderManager.get(),L"../Content/plane.obj",true);
 	mSkyObj.Load(GetDevice(),mpShaderManager.get(),
@@ -127,7 +129,7 @@ void MyApp::Startup()
 	mTeapot.mMaterial.mMaterial.gMaterial.Specular.w=20;	// power
 	mTeapot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1,0.1,1,1)*0.5f;
 	mTeapot.mMaterial.mMaterial.gEnableReflection=true;
-
+	
 }
 void MyApp::Draw()
 {
@@ -163,10 +165,10 @@ void MyApp::Draw()
 	mTerrainMat.FillMatrixes(world,view,proj);
 	mTerrainMat.Apply(GetContext());
 	mpTerrain->Draw(GetContext());
-	mpTerrain->Draw(GetContext());
+	//mpTerrain->Draw(GetContext());
 
 
-	world=Matrix::CreateTranslation(0,0,0);
+	world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
 	mTeapot.mMaterial.FillMatrixes(world,view,proj);
 	mTeapot.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
 	mTeapot.mMaterial.Apply(GetContext());
@@ -194,7 +196,7 @@ void MyApp::DrawShadows(const Matrix& view,const Matrix& proj)
 	// getting the strongest light source (gDirLights[0]) to make the shadow
 	Vector3 toLight=-mTeapot.mMaterial.mLights.gDirLights[0].Direction;
 	// make matrix (see Luna for the math details)
-	Matrix shadowMatrix=Matrix::CreateShadow(toLight,ground);
+	Matrix shadowMatrix=Matrix::CreateShadow(toLight,ground) * Matrix::CreateScale(0.1f);
 	// add a very small offset to keep it out of the ground
 	shadowMatrix*=Matrix::CreateTranslation(0,0.01f,0);
 
@@ -229,7 +231,8 @@ void MyApp::Update()
 		CloseWin();
 	mCamera.Update();
 }
-
+void MyApp::Shutdown()
+{}
 
 // in console C++ is was main()
 // in Windows C++ its called WinMain()  (or sometimes wWinMain)
