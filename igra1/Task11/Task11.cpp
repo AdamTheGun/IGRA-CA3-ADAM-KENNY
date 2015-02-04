@@ -40,15 +40,24 @@ class MyApp:public App
 	std::unique_ptr<PrimitiveBatch<ColouredVertex>> mpDraw3D;
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
-	ModelObj mTeapot,mPlane,mSkyObj;
+	ModelObj mTeapot,mPlane,mSkyObj,mBarracksObj;
 	void DrawShadows(const Matrix& view,const Matrix& proj) ;
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 	
 	ArcBallCamera mCamera;
 	
+	//Temp Variables
+	float mHealth;
+	float mEnergy;
+	int mScore;
+
 	std::unique_ptr<Terrain> mpTerrain;
 	TerrainMaterial mTerrainMat;
+
+	std::unique_ptr<SpriteBatch> mpSpriteBatch;
+	std::unique_ptr<SpriteFont> mpSpriteFont;
+ 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
 };
 
 void MyApp::Startup()
@@ -81,6 +90,8 @@ void MyApp::Startup()
                                GetDevice(),L"../Content/CA Terrain/Game_l.png"));
 	// load models:
 	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/Mech-Mk1.obj",
+                         true);
+	mBarracksObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Barracks.obj",
                          true);
 	mPlane.Load(GetDevice(),mpShaderManager.get(),L"../Content/plane.obj",true);
 	mSkyObj.Load(GetDevice(),mpShaderManager.get(),
@@ -117,8 +128,6 @@ void MyApp::Startup()
 	// make it:
 	GetDevice()->CreateDepthStencilState(&dsd,&mpShadowStencil);
 
-	
-
 	mSkyObj.mMaterial.mpVS=mpShaderManager->VSSkybox();
 	mSkyObj.mMaterial.mpLayout=mpShaderManager->LayoutSkybox();
 	mSkyObj.mMaterial.mpPS=mpShaderManager->PSSkybox();
@@ -127,9 +136,16 @@ void MyApp::Startup()
 
 	mTeapot.mMaterial.mMaterial.gMaterial.Specular=Color(1,1,1,1);
 	mTeapot.mMaterial.mMaterial.gMaterial.Specular.w=20;	// power
-	mTeapot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1,0.1,1,1)*0.5f;
+	mTeapot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1f,0.1f,1,1)*0.5f;
 	mTeapot.mMaterial.mMaterial.gEnableReflection=true;
 	
+	mHealth = 100.0f;
+	mEnergy = 100.0f;
+	mScore = 0;
+
+	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
+	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
+	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 }
 void MyApp::Draw()
 {
@@ -138,6 +154,7 @@ void MyApp::Draw()
                                   D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL,1,0);
 	GetContext()->ClearRenderTargetView(GetRenderTargetView(),
                                   Colors::SkyBlue);
+
 	// Set common rendering flags
 	GetContext()->IASetPrimitiveTopology(
                             D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -145,6 +162,7 @@ void MyApp::Draw()
                             mpShaderManager->CommonStates()->DepthDefault(),0);
 	ShaderManager::SetSampler(GetContext(),
                             mpShaderManager->CommonStates()->LinearWrap());
+
 
 	GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
 
@@ -157,7 +175,6 @@ void MyApp::Draw()
 	mPlane.mMaterial.FillMatrixes(world,view,proj);
 	mPlane.mMaterial.Apply(GetContext());
 	mPlane.Draw(GetContext());
-
 	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
@@ -167,6 +184,11 @@ void MyApp::Draw()
 	mpTerrain->Draw(GetContext());
 	//mpTerrain->Draw(GetContext());
 
+	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
+	//mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
+	//mBarracksObj.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
+	//mBarracksObj.mMaterial.Apply(GetContext());
+	//mBarracksObj.Draw(GetContext());
 
 	world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
 	mTeapot.mMaterial.FillMatrixes(world,view,proj);
@@ -183,6 +205,26 @@ void MyApp::Draw()
 	mSkyObj.mMaterial.Apply(GetContext());
 	mSkyObj.Draw(GetContext());
 	// Present the backbuffer to the screen
+	
+	GetContext()->OMSetDepthStencilState(
+                            mpShaderManager->CommonStates()->DepthDefault(),0);
+	//XMMATRIX matrix = XMMATRIX(mEnergy/10,0,0,0,0,1,0,0,0,0,1,0,-1,1,0,1);
+
+	RECT rec;
+	rec.left = 50;
+	rec.top = 50;
+	rec.right = 400;
+	rec.bottom = 75;
+
+	const RECT* rect = &rec;
+	
+	mpSpriteBatch->Begin();
+	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+	std::wstring str = ToString("Score: "+mScore);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),str.c_str(),Vector2(400,400),Colors::White);
+	mpSpriteBatch->End();
+	
+	GetContext()->OMSetDepthStencilState(nullptr,0);
 
 
 	GetSwapChain()->Present(0, 0);
@@ -229,6 +271,16 @@ void MyApp::Update()
 {
 	if (Input::KeyPress(VK_ESCAPE))
 		CloseWin();
+	if(mEnergy<=100.0f){
+		if(Input::KeyDown(VK_UP))
+			mEnergy++;
+	}
+	if (mEnergy>=0)
+	{		
+		if(Input::KeyDown(VK_DOWN))
+			mEnergy--;
+	}
+
 	mCamera.Update();
 }
 void MyApp::Shutdown()

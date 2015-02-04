@@ -12,5 +12,5 @@ newmtl 01___Default
 	Kd 0.0157 0.2000 0.0000
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
-	map_Ka C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Pine_Tree.jpg
-	map_Kd C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Content\Pine_Tree.jpg
+	map_Ka Pine_Tree.jpg
+	map_Kd Pine_Tree.jpg
