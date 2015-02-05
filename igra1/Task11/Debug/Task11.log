@@ -1,1 +1,3 @@
-﻿
+﻿  Task11.cpp
+c:\users\user\desktop\singapore polytechnic\year 2(current)\semester 2(current)\igra\ca3\igra1\task11\task11.cpp(222): warning C4244: 'argument' : conversion from 'LONG' to 'float', possible loss of data
+  Task11.vcxproj -> C:\Users\user\Desktop\Singapore Polytechnic\Year 2(Current)\Semester 2(Current)\IGRA\CA3\igra1\Debug\Task11.exe

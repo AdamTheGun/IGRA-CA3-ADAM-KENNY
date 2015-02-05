@@ -45,10 +45,6 @@ class MyApp:public App
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 	
-	Vector3 mPlayerPos; // Temp Variable used for Kenny's Pos
-	std::vector<Vector3> mSpawnLocationPos;
-
-
 	ArcBallCamera mCamera;
 	
 	//Temp Variables
@@ -62,7 +58,6 @@ class MyApp:public App
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont;
  	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
-	
 };
 
 void MyApp::Startup()
@@ -77,9 +72,9 @@ void MyApp::Startup()
 	mCamera.Reset();
 
 //	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game.bmp",
-  //                         Vector3(1,0.3f,1)));
+      //                     Vector3(1,0.3f,1)));
 	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game2.bmp",
-                            Vector3(5,0.3f,5)));
+                            Vector3(2,0.3f,2)));
 	mTerrainMat.mpShaderManager=mpShaderManager.get();
 	mTerrainMat.mpTexBase.Attach(CreateTextureResourceWIC(GetDevice(),
                           L"../Content/CA Terrain/Game_d.png"));
@@ -147,13 +142,6 @@ void MyApp::Startup()
 	mHealth = 100.0f;
 	mEnergy = 100.0f;
 	mScore = 0;
-	mPlayerPos = Vector3(0,0,0);
-	
-	mSpawnLocationPos.push_back(Vector3(1000,mpTerrain->GetHeight(1000,1000),1000));
-	mSpawnLocationPos.push_back(Vector3(-100,mpTerrain->GetHeight(-100,100),100));
-	mSpawnLocationPos.push_back(Vector3(100,mpTerrain->GetHeight(100,-100),-100));
-	mSpawnLocationPos.push_back(Vector3(200,mpTerrain->GetHeight(100,100),100));
-	mSpawnLocationPos.push_back(Vector3(100,mpTerrain->GetHeight(100,100),200));
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
@@ -174,9 +162,7 @@ void MyApp::Draw()
                             mpShaderManager->CommonStates()->DepthDefault(),0);
 	ShaderManager::SetSampler(GetContext(),
                             mpShaderManager->CommonStates()->LinearWrap());
-	
-	const float BLEND_FACTOR[] = {0.0f, 0.0f, 0.0f, 0.0f};
-	const unsigned BLEND_MASK=0xffffffff;
+
 
 	GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
 
@@ -204,7 +190,7 @@ void MyApp::Draw()
 	//mBarracksObj.mMaterial.Apply(GetContext());
 	//mBarracksObj.Draw(GetContext());
 
-	world=Matrix::CreateTranslation(mPlayerPos) * Matrix::CreateScale(0.1f);
+	world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
 	mTeapot.mMaterial.FillMatrixes(world,view,proj);
 	mTeapot.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
 	mTeapot.mMaterial.Apply(GetContext());
@@ -214,17 +200,6 @@ void MyApp::Draw()
 	mTeapot.Draw(GetContext());
 	DrawShadows(view,proj);
 	// draw sky
-
-	for(unsigned i = 0;i<mSpawnLocationPos.size();i++)
-	{
-		world=Matrix::CreateTranslation(mSpawnLocationPos[i]) * Matrix::CreateScale(0.1f);
-		mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
-		mBarracksObj.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
-		mBarracksObj.mMaterial.Apply(GetContext());
-		mBarracksObj.Draw(GetContext());
-	}
-
-
 	world= Matrix::CreateTranslation(mCamera.GetCamPos());
 	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
 	mSkyObj.mMaterial.Apply(GetContext());
@@ -249,7 +224,6 @@ void MyApp::Draw()
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),str.c_str(),Vector2(400,400),Colors::White);
 	mpSpriteBatch->End();
 	
-	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
 
@@ -267,7 +241,7 @@ void MyApp::DrawShadows(const Matrix& view,const Matrix& proj)
 	Matrix shadowMatrix=Matrix::CreateShadow(toLight,ground) * Matrix::CreateScale(0.1f);
 	// add a very small offset to keep it out of the ground
 	shadowMatrix*=Matrix::CreateTranslation(0,0.01f,0);
-	
+
 	const float BLEND_FACTOR[] = {0.0f, 0.0f, 0.0f, 0.0f};
 	const unsigned BLEND_MASK=0xffffffff;
 	GetContext()->OMSetBlendState(
@@ -307,23 +281,10 @@ void MyApp::Update()
 			mEnergy--;
 	}
 
-	
-	if(Input::KeyDown(VK_RSHIFT))
-	{
-		mPlayerPos.x +=5;
-	}
-	
-	//mPlayerPos.Move(move*(MOVE_SPEED*Timer::GetDeltaTime()));
-	float h  = mpTerrain->GetHeight(mPlayerPos.x/5,mPlayerPos.z/5);
-	
-	mPlayerPos.y = h/0.3f;
-
 	mCamera.Update();
 }
 void MyApp::Shutdown()
-{
-
-}
+{}
 
 // in console C++ is was main()
 // in Windows C++ its called WinMain()  (or sometimes wWinMain)

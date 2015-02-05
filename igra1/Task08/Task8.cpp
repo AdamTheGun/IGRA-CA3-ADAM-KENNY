@@ -126,6 +126,9 @@ void MyApp::Startup()
 	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/teapot.obj",true);
 	mPlane.Load(GetDevice(),mpShaderManager.get(),L"../Content/plane.obj",true);
 	mAxisObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/axis1.obj");
+	mBox.Load(GetDevice(),mpShaderManager.get(),L"../Content/crate.obj");
+	mYellowBallObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/yellow_ball.obj");
+	mCarShipObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Car-Ship.obj");
 	
 	mDiagnostics = false;
 
