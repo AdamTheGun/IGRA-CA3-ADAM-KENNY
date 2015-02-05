@@ -55,7 +55,7 @@ void ModelObj::LoadGeometry(const wchar_t* filename_obj,std::wstring& outMtlFile
                                     objverts[i].pos.y,objverts[i].pos.z);
 		outVerts[i].Normal=XMFLOAT3(objverts[i].norm.x,
                                     objverts[i].norm.y,objverts[i].norm.z);
-		outVerts[i].TexC=XMFLOAT2(objverts[i].tex.x,objverts[i].tex.y);
+		outVerts[i].TexC=XMFLOAT2(objverts[i].tex.x,1-objverts[i].tex.y);
 		outVerts[i].TangentU=Vector3(1,0,0);	// dummy value
 		outIndexs[i]=i;
 	}
