@@ -12,6 +12,7 @@
 #include "SimpleMathToString.h"
 #include "SpriteBatch.h" 
 #include "SpriteFont.h"
+#include "Node.h"
 
 #include "Draw3D.h"
 #include "Terrain.h"
@@ -28,29 +29,50 @@ using namespace DirectX::SimpleMath;
 using namespace DirectX;
 using namespace igra;
 
+class Bullet : public DrawableNode
+{
+public:
+	Vector3 mVelocity;
+	float mLifetime;
+	virtual void Update();
+};
+
 class MyApp:public App
 {
 	void Startup();
 	void Update();
 	void Draw();
-	void Shutdown();	
+	void Shutdown();
+	void FireShot();
+	void CheckCollisions();	
+
+	Vector2 mCentreOfScreen;
 
 	// shader manager: handles VS,PS, layouts & constant buffers
 	std::unique_ptr<ShaderManager> mpShaderManager;
 	std::unique_ptr<PrimitiveBatch<ColouredVertex>> mpDraw3D;
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
-	ModelObj mTeapot,mPlane,mSkyObj,mBarracksObj;
+	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj;
 	void DrawShadows(const Matrix& view,const Matrix& proj) ;
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
+	std::vector<Bullet*> mBullets;
 	
-	ArcBallCamera mCamera;
+	//ArcBallCamera mCamera;
+	CameraNode mCamera;
+	Vector3 mCurrentCamMode, mCurrentCamAngle;
+	Vector3 mTPScam, mFPScam, mShoulderCam, mBackCam;
+	Vector3 mTPSangle, mFPSangle, mShoulderAngle, mBackAngle;
+
+	DrawableNode mPlayer;
+	float maxHeight;
 	
 	//Temp Variables
 	float mHealth;
 	float mEnergy;
 	int mScore;
+	float mRecoverDelay;
 
 	std::unique_ptr<Terrain> mpTerrain;
 	TerrainMaterial mTerrainMat;
@@ -58,18 +80,65 @@ class MyApp:public App
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont;
  	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
+
+	std::wstring testStr;
 };
+
+void Bullet::Update()
+{
+	mLifetime-= Timer::GetDeltaTime();
+	mPos+=mVelocity*Timer::GetDeltaTime();
+	if(mLifetime<0)
+	{
+		Kill();//Kills self
+	}
+}
+void MyApp::FireShot()
+{
+	Bullet* ptr = FindDeadNode(mBullets);
+	if(ptr== nullptr)return;
+	
+	mEnergy--;
+	ptr->mHealth=100;
+	ptr->mLifetime= 3.0f;
+	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-0.75f,3.8f,1)));
+	ptr->mVelocity = mPlayer.RotateVector(Vector3(1.5f,-1.8f,10));
+	ptr->mScale=0.4f;
+}
+void MyApp::CheckCollisions()
+{
+	for(int b = 0;b<mBullets.size();b++)
+	{
+		if(mBullets[b]->IsAlive()==false) continue;
+		
+		BoundingSphere bs = mBullets[b]->GetBounds();
+
+		/*for(int t = 0;t <mBoxes.size();t++)
+		{
+			if(mBoxes[t]->IsAlive()==false)continue;
+
+			if(bs.Intersects(mBoxes[t]->GetBounds()))
+			{
+				mBullets[b]->Kill();
+				mBoxes[t]->mHealth-=25;
+			}
+		}*/
+	}
+}
 
 void MyApp::Startup()
 {
 	// set the title (needs the L"..." because of Unicode)
 	mTitle=L"Task 11: BUILDING";
 
+	ShowCursor(false);
+	mCentreOfScreen = Vector2(GetWindowRect().right / 2,GetWindowRect().bottom / 2);
+
 	// just create the Shader Manager
 	mpShaderManager.reset(new ShaderManager(GetDevice()));
 	
 	// initial pos/tgt for camera
-	mCamera.Reset();
+	//mCamera.Reset();
 
 //	mpTerrain.reset(new Terrain(GetDevice(),L"../Content/CA Terrain/Game.bmp",
       //                     Vector3(1,0.3f,1)));
@@ -89,15 +158,24 @@ void MyApp::Startup()
 	mTerrainMat.mpTexLight.Attach(CreateTextureResourceWIC(
                                GetDevice(),L"../Content/CA Terrain/Game_l.png"));
 	// load models:
-	mTeapot.Load(GetDevice(),mpShaderManager.get(),L"../Content/Mech-Mk1.obj",
+	mRobot.Load(GetDevice(),mpShaderManager.get(),L"../Content/Mech-Mk1.obj",
                          true);
 	mBarracksObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Barracks.obj",
                          true);
 	mPlane.Load(GetDevice(),mpShaderManager.get(),L"../Content/plane.obj",true);
 	mSkyObj.Load(GetDevice(),mpShaderManager.get(),
                                L"../Content/skyball.obj",false);
+	mYellowBallObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/yellow_ball.obj");
 	mpCubemap.Attach(CreateTextureResourceDDS(GetDevice(),
                                L"../Content/Cubemaps/grasscube1024.dds"));
+	
+	for(int i = 0;i<20;i++)
+	{
+		Bullet* ptr = new Bullet();
+		ptr->Init(&mYellowBallObj);
+		ptr->Kill();
+		mBullets.push_back(ptr);
+	}
 
 	mShadowMaterial.mpShaderManager=mpShaderManager.get();
 	mShadowMaterial.mpVS=mpShaderManager->VSDefault();
@@ -134,18 +212,39 @@ void MyApp::Startup()
 	mSkyObj.mMaterial.mpTexture=mpCubemap;
 	mSkyObj.mMaterial.mMaterial.gUseTexture=true;
 
-	mTeapot.mMaterial.mMaterial.gMaterial.Specular=Color(1,1,1,1);
-	mTeapot.mMaterial.mMaterial.gMaterial.Specular.w=20;	// power
-	mTeapot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1f,0.1f,1,1)*0.5f;
-	mTeapot.mMaterial.mMaterial.gEnableReflection=true;
-	
+	mRobot.mMaterial.mMaterial.gMaterial.Specular=Color(1,1,1,1);
+	mRobot.mMaterial.mMaterial.gMaterial.Specular.w=20;	// power
+	mRobot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1f,0.1f,1,1)*0.5f;
+	mRobot.mMaterial.mMaterial.gEnableReflection=true;
+
 	mHealth = 100.0f;
 	mEnergy = 100.0f;
 	mScore = 0;
+	mRecoverDelay = 0;
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
+
+	mPlayer.Init(&mRobot, Vector3(0,0,0));
+	mCamera.Init(Vector3(0,0,0));
+	
+	maxHeight = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 2;
+
+	mTPScam = Vector3(-2,7,-8);
+	mTPSangle = Vector3(0,3,4);
+
+	mFPScam = Vector3(0,4.5f,1);
+	mFPSangle = Vector3(0,3,5);
+
+	mShoulderCam = Vector3(2,5,-2);
+	mShoulderAngle = Vector3(0,4,6);
+
+	mBackCam = Vector3(2,6,3);
+	mBackAngle = Vector3(0,2,-6);
+
+	mCurrentCamMode = mTPScam;
+	mCurrentCamAngle = mTPSangle;
 }
 void MyApp::Draw()
 {
@@ -163,13 +262,17 @@ void MyApp::Draw()
 	ShaderManager::SetSampler(GetContext(),
                             mpShaderManager->CommonStates()->LinearWrap());
 
-
+	const float BLEND_FACTOR[] = {0.0f, 0.0f, 0.0f, 0.0f};
+	const unsigned BLEND_MASK=0xffffffff;
 	GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
 
 	// setup the matrixes
 	Matrix world;
 	Matrix view=mCamera.GetViewMatrix();
-	Matrix proj=mCamera.GetDefaultProjectionMatrix();
+	Matrix proj=mCamera.GetProjectionMatrix();
+
+	DrawAliveNodes(mBullets,GetContext(),view,proj);
+
 	// the models:
 	world=Matrix::CreateTranslation(0,0,0);
 	mPlane.mMaterial.FillMatrixes(world,view,proj);
@@ -178,11 +281,13 @@ void MyApp::Draw()
 	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
-	world= Matrix::CreateTranslation(0,-20,0);
+	world= Matrix::CreateTranslation(0,0,0);
 	mTerrainMat.FillMatrixes(world,view,proj);
 	mTerrainMat.Apply(GetContext());
 	mpTerrain->Draw(GetContext());
 	//mpTerrain->Draw(GetContext());
+
+	
 
 	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
 	//mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
@@ -190,17 +295,18 @@ void MyApp::Draw()
 	//mBarracksObj.mMaterial.Apply(GetContext());
 	//mBarracksObj.Draw(GetContext());
 
-	world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
-	mTeapot.mMaterial.FillMatrixes(world,view,proj);
-	mTeapot.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
-	mTeapot.mMaterial.Apply(GetContext());
+	/*world=Matrix::CreateTranslation(mPlayerPos.x,mPlayerPos.y,mPlayerPos.z) * Matrix::CreateScale(0.1f);
+	mPlayer.mMaterial.FillMatrixes(world,view,proj);
+	mPlayer.mMaterial.mLights.gEyePosW=mCamera.GetPos();
+	mPlayer.mMaterial.Apply(GetContext());*/
 	// EXTRA: add the cubemap as T1
 	ID3D11ShaderResourceView* tex[]={mpCubemap};
 	GetContext()->PSSetShaderResources(1,1,tex);	// set as index T1
-	mTeapot.Draw(GetContext());
-	DrawShadows(view,proj);
+	mPlayer.Draw(GetContext(),view,proj);
+	mPlayer.mScale = 0.1f;
+	//DrawShadows(view,proj);
 	// draw sky
-	world= Matrix::CreateTranslation(mCamera.GetCamPos());
+	world= Matrix::CreateTranslation(mCamera.GetPos());
 	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
 	mSkyObj.mMaterial.Apply(GetContext());
 	mSkyObj.Draw(GetContext());
@@ -222,69 +328,142 @@ void MyApp::Draw()
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 	std::wstring str = ToString("Score: "+mScore);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),str.c_str(),Vector2(400,400),Colors::White);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(199,199), Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(200,200), Colors::White);
 	mpSpriteBatch->End();
-	
-	GetContext()->OMSetDepthStencilState(nullptr,0);
 
+	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
+	GetContext()->OMSetDepthStencilState(
+                            mpShaderManager->CommonStates()->DepthDefault(),0);
+	//GetContext()->OMSetDepthStencilState(nullptr,0);
 
 	GetSwapChain()->Present(0, 0);
 
 }
 void MyApp::DrawShadows(const Matrix& view,const Matrix& proj)
 {
-	Matrix world;
-	// create shadow matrix:
-	Plane ground(Vector3(0,1,0),0); // ground's normal is up & pos is 0
-	// getting the strongest light source (gDirLights[0]) to make the shadow
-	Vector3 toLight=-mTeapot.mMaterial.mLights.gDirLights[0].Direction;
-	// make matrix (see Luna for the math details)
-	Matrix shadowMatrix=Matrix::CreateShadow(toLight,ground) * Matrix::CreateScale(0.1f);
-	// add a very small offset to keep it out of the ground
-	shadowMatrix*=Matrix::CreateTranslation(0,0.01f,0);
+	//Matrix world;
+	//// create shadow matrix:
+	//Plane ground(Vector3(0,1,0),0); // ground's normal is up & pos is 0
+	//// getting the strongest light source (gDirLights[0]) to make the shadow
+	//Vector3 toLight=-mPlayer.mMaterial.mLights.gDirLights[0].Direction;
+	//// make matrix (see Luna for the math details)
+	//Matrix shadowMatrix=Matrix::CreateShadow(toLight,ground) * Matrix::CreateScale(0.1f);
+	//// add a very small offset to keep it out of the ground
+	//shadowMatrix*=Matrix::CreateTranslation(0,0.01f,0);
 
-	const float BLEND_FACTOR[] = {0.0f, 0.0f, 0.0f, 0.0f};
-	const unsigned BLEND_MASK=0xffffffff;
-	GetContext()->OMSetBlendState(
-            mpShaderManager->CommonStates()->NonPremultiplied(),
-            BLEND_FACTOR,BLEND_MASK);
-	GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
+	//const float BLEND_FACTOR[] = {0.0f, 0.0f, 0.0f, 0.0f};
+	//const unsigned BLEND_MASK=0xffffffff;
+	//GetContext()->OMSetBlendState(
+ //           mpShaderManager->CommonStates()->NonPremultiplied(),
+ //           BLEND_FACTOR,BLEND_MASK);
+	//GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
 
-	// draw objects almost as normal:
-	// just using a different material & a different world matrix
+	//// draw objects almost as normal:
+	//// just using a different material & a different world matrix
 
-	GetContext()->OMSetDepthStencilState(mpShadowStencil,1);
+	//GetContext()->OMSetDepthStencilState(mpShadowStencil,1);
 
-	world=Matrix::CreateTranslation(0,1,0) * shadowMatrix;
-	mShadowMaterial.FillMatrixes(world,view,proj);
-	mShadowMaterial.Apply(GetContext());
-	mTeapot.Draw(GetContext());
-	// draw all the rest using the world*shadowMatrix
+	//world=Matrix::CreateTranslation(0,1,0) * shadowMatrix;
+	//mShadowMaterial.FillMatrixes(world,view,proj);
+	//mShadowMaterial.Apply(GetContext());
+	//mPlayer.Draw(GetContext());
+	//// draw all the rest using the world*shadowMatrix
 
-	// turn off blend 
-	GetContext()->OMSetBlendState(
-               mpShaderManager->CommonStates()->Opaque(),
-               BLEND_FACTOR,BLEND_MASK);
-	GetContext()->OMSetDepthStencilState(nullptr,0);
+	//// turn off blend 
+	//GetContext()->OMSetBlendState(
+ //              mpShaderManager->CommonStates()->Opaque(),
+ //              BLEND_FACTOR,BLEND_MASK);
+	//GetContext()->OMSetDepthStencilState(nullptr,0);
 }
 
 void MyApp::Update()
 {
+	//SetCursorPos(mCentreOfScreen.x, mCentreOfScreen.y);
+
 	if (Input::KeyPress(VK_ESCAPE))
 		CloseWin();
 	if(mEnergy<=100.0f){
 		if(Input::KeyDown(VK_UP))
 			mEnergy++;
 	}
-	if (mEnergy>=0)
+	/*if (mEnergy>=0)
 	{		
 		if(Input::KeyDown(VK_DOWN))
 			mEnergy--;
+	}*/
+	if(Input::KeyPress(VK_LBUTTON))
+	{
+		if (mEnergy>=0)
+		{	
+			mRecoverDelay = 0;
+			FireShot();
+		}
+	}
+	else
+	{
+		if(mRecoverDelay <= 1)
+		{
+			mRecoverDelay += Timer::GetDeltaTime();
+		}
+		else if(mEnergy <= 100.0f)
+		{
+			mEnergy += 2 * Timer::GetDeltaTime();
+		}
 	}
 
-	mCamera.Update();
+#pragma region Camera Modes Switch
+	if (Input::KeyPress(VK_F1))
+	{
+		mCurrentCamMode = mTPScam;
+		mCurrentCamAngle = mTPSangle;
+	}
+	if (Input::KeyPress(VK_F2))
+	{
+		mCurrentCamMode = mFPScam;
+		mCurrentCamAngle = mFPSangle;
+	}
+	if (Input::KeyPress(VK_F3))
+	{
+		mCurrentCamMode = mShoulderCam;
+		mCurrentCamAngle = mShoulderAngle;
+	}
+	if(Input::KeyPress(VK_F4))
+	{
+		mCurrentCamMode = mBackCam;
+		mCurrentCamAngle = mBackAngle;
+	}
+#pragma endregion
+	
+	UpdateAliveNodes(mBullets);
+	//CheckCollisions();
+
+	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
+
+	float MOVE_SPEED = 5;
+	float TURN_SPEED = XMConvertToRadians(60);
+	Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
+	Vector3 turn = GetMouseTurn();
+	turn.y = 0;
+
+	mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
+	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
+
+	if(mPlayer.mPos.y > maxHeight)
+		mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
+
+	mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
+	testStr = ToString("Player Height: ", maxHeight);
+
+	mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
+	mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
+	//mCamera.LookAt(Vector3(0,0,3));
+	//mCamera.Update();
 }
 void MyApp::Shutdown()
-{}
+{
+	DeleteAllNodes(mBullets);
+}
 
 // in console C++ is was main()
 // in Windows C++ its called WinMain()  (or sometimes wWinMain)

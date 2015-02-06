@@ -148,6 +148,7 @@ public:
 	\param vk the keycode to use: see KeyPress() for a list of keycodes
 	*/
 	static inline bool KeyPress(int vk){return mKeyDown[vk] && !mOldKeyDown[vk];}
+	static inline bool KeyRelease(int vk){return !mKeyDown[vk] && mOldKeyDown[vk];}
 
 	/** Returns the mouses location in pixels.
 	\returns POINT x,y the mouses location, relative to the window
