@@ -44,6 +44,7 @@ class MyApp:public App
 	void Draw();
 	void Shutdown();
 	void FireShot();
+	void FireCluster();
 	void CheckCollisions();	
 
 	Vector2 mCentreOfScreen;
@@ -58,6 +59,7 @@ class MyApp:public App
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 	std::vector<Bullet*> mBullets;
+	std::vector<Bullet*> mClusters;
 	
 	//ArcBallCamera mCamera;
 	CameraNode mCamera;
@@ -73,6 +75,9 @@ class MyApp:public App
 	float mEnergy;
 	int mScore;
 	float mRecoverDelay;
+	float mEnergyBlink, mAlphaModifier;
+
+	float mClusterActive, mClusterTimer;
 
 	std::unique_ptr<Terrain> mpTerrain;
 	TerrainMaterial mTerrainMat;
@@ -102,8 +107,29 @@ void MyApp::FireShot()
 	ptr->mHealth=100;
 	ptr->mLifetime= 3.0f;
 	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-0.75f,3.8f,1)));
-	ptr->mVelocity = mPlayer.RotateVector(Vector3(1.5f,-1.8f,10));
+	ptr->mVelocity = mPlayer.RotateVector(Vector3(3,-3.6f,20));
 	ptr->mScale=0.4f;
+}
+void MyApp::FireCluster()
+{
+	/*
+	Bullet* ptr = FindDeadNode(mBullets);
+	if(ptr== nullptr)return;
+	*/
+
+	//float rot = 40;
+	for(int i = 0; i < mClusters.size(); i++)
+	{
+		float rot = randf(-40, 40);
+		Bullet* ptr = mClusters[i];
+		ptr->mHealth=100;
+		ptr->mLifetime= 3.0f;
+		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,3,-0.8f)));
+		//ptr->Yaw(mPlayer.GetHpr().z);
+		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot));
+		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
+		ptr->mScale=0.6f;
+	}
 }
 void MyApp::CheckCollisions()
 {
@@ -177,6 +203,14 @@ void MyApp::Startup()
 		mBullets.push_back(ptr);
 	}
 
+	for(int i = 0;i<8;i++)
+	{
+		Bullet* ptr = new Bullet();
+		ptr->Init(&mYellowBallObj);
+		ptr->Kill();
+		mClusters.push_back(ptr);
+	}
+
 	mShadowMaterial.mpShaderManager=mpShaderManager.get();
 	mShadowMaterial.mpVS=mpShaderManager->VSDefault();
 	mShadowMaterial.mpLayout=mpShaderManager->LayoutDefault();
@@ -221,6 +255,10 @@ void MyApp::Startup()
 	mEnergy = 100.0f;
 	mScore = 0;
 	mRecoverDelay = 0;
+	mEnergyBlink = 1.0f;
+
+	mClusterActive = false;
+	mClusterTimer = 0;
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
@@ -231,7 +269,9 @@ void MyApp::Startup()
 	
 	maxHeight = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 2;
 
-	mTPScam = Vector3(-2,7,-8);
+	/*mTPScam = Vector3(-2,7,-8);
+	mTPSangle = Vector3(0,3,4);*/
+	mTPScam = Vector3(-2,7,-15);
 	mTPSangle = Vector3(0,3,4);
 
 	mFPScam = Vector3(0,4.5f,1);
@@ -271,8 +311,6 @@ void MyApp::Draw()
 	Matrix view=mCamera.GetViewMatrix();
 	Matrix proj=mCamera.GetProjectionMatrix();
 
-	DrawAliveNodes(mBullets,GetContext(),view,proj);
-
 	// the models:
 	world=Matrix::CreateTranslation(0,0,0);
 	mPlane.mMaterial.FillMatrixes(world,view,proj);
@@ -311,6 +349,9 @@ void MyApp::Draw()
 	mSkyObj.mMaterial.Apply(GetContext());
 	mSkyObj.Draw(GetContext());
 	// Present the backbuffer to the screen
+
+	DrawAliveNodes(mBullets,GetContext(),view,proj);
+	DrawAliveNodes(mClusters,GetContext(),view,proj);
 	
 	GetContext()->OMSetDepthStencilState(
                             mpShaderManager->CommonStates()->DepthDefault(),0);
@@ -325,9 +366,10 @@ void MyApp::Draw()
 	const RECT* rect = &rec;
 	
 	mpSpriteBatch->Begin();
-	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
-	std::wstring str = ToString("Score: "+mScore);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),str.c_str(),Vector2(400,400),Colors::White);
+	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+	std::wstring scoreStr = ToString("Score: "+mScore);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(199,199), Colors::Black);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(200,200), Colors::White);
 	mpSpriteBatch->End();
@@ -383,15 +425,17 @@ void MyApp::Update()
 
 	if (Input::KeyPress(VK_ESCAPE))
 		CloseWin();
+
+#pragma region Player Shooting Functions & Effects
 	if(mEnergy<=100.0f){
 		if(Input::KeyDown(VK_UP))
 			mEnergy++;
 	}
-	/*if (mEnergy>=0)
-	{		
+	if(mEnergy>=0)
+	{
 		if(Input::KeyDown(VK_DOWN))
 			mEnergy--;
-	}*/
+	}
 	if(Input::KeyPress(VK_LBUTTON))
 	{
 		if (mEnergy>=0)
@@ -402,15 +446,71 @@ void MyApp::Update()
 	}
 	else
 	{
+		// Recovery after shooting
 		if(mRecoverDelay <= 1)
 		{
 			mRecoverDelay += Timer::GetDeltaTime();
 		}
 		else if(mEnergy <= 100.0f)
 		{
-			mEnergy += 2 * Timer::GetDeltaTime();
+			mEnergy += 4 * Timer::GetDeltaTime();
 		}
 	}
+
+	if(mClusterActive == false)
+	{
+		if(Input::KeyPress(0x5A))
+		{
+			FireCluster();
+			mClusterActive = true;
+		}	
+	}
+
+	if(mClusterActive == true)
+	{
+		mClusterTimer += Timer::GetDeltaTime();
+
+		if(mClusterTimer <= 0.5f)
+		{
+			for(int i = 0; i < mClusters.size(); i++)
+			{
+				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 12, -50 + (200 * mClusterTimer)));
+			}
+		}
+		else
+		{
+			for(int i = 0; i < mClusters.size(); i++)
+			{
+				float randX = randf(-5, 5);
+				float randY = randf(-10, 0);
+				//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
+				//mClusters[i]->LookAt(Vector3(0, 0, randZ));
+				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+			}
+		}
+
+		if(mClusterTimer >= 3.0f)
+		{
+			mClusterActive = false;
+			mClusterTimer = 0;
+		}
+	}
+
+	// Blinking effect when energy is low
+	if(mEnergy <= 20.0f)
+	{
+		if(mEnergyBlink <= 0)
+			mAlphaModifier = 2 * Timer::GetDeltaTime();
+		else if(mEnergyBlink >= 1)
+			mAlphaModifier = -2 * Timer::GetDeltaTime();
+
+		mEnergyBlink += mAlphaModifier;
+	}
+	else
+	{
+		mEnergyBlink = 1.0f;
+	}
+#pragma endregion
 
 #pragma region Camera Modes Switch
 	if (Input::KeyPress(VK_F1))
@@ -436,6 +536,7 @@ void MyApp::Update()
 #pragma endregion
 	
 	UpdateAliveNodes(mBullets);
+	UpdateAliveNodes(mClusters);
 	//CheckCollisions();
 
 	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
@@ -453,7 +554,7 @@ void MyApp::Update()
 		mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
 
 	mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
-	testStr = ToString("Player Height: ", maxHeight);
+	testStr = ToString("Cluster Timer: ", mClusterTimer);
 
 	mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
 	mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
