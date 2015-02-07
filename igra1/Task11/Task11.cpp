@@ -45,6 +45,7 @@ public:
 	Vector3 mVelocity,mDirection;
 	Vector3* mEnemyPos;
 	BOOL attackBool;
+	float shotTimer;
 	void Update();
 	void Activate();
 };
@@ -66,6 +67,7 @@ class MyApp:public App
 	void Draw();
 	void Shutdown();
 	void FireShot();
+	void FireEnemyShot(Enemy*);
 	void FireCluster();
 	void CheckCollisions();	
 	void DeployEnemy();
@@ -134,9 +136,15 @@ void Enemy::Update()
 	{
 		mVelocity = (*(mEnemyPos) - GetPos())/3;
 		mPos+=mVelocity*Timer::GetDeltaTime();
-		
+		attackBool = false;
 		//mPos.y = MyApp::GetHeight(mPos);
 	}
+	else 
+	{
+		attackBool  =true;
+
+	}
+	
 	LookAt(*(mEnemyPos));
 	if(mHealth<0)
 	{
@@ -144,7 +152,11 @@ void Enemy::Update()
 	}
 	if(attackBool == true)
 	{
-		//Move the enemy to player
+		shotTimer+=Timer::GetDeltaTime();
+	}
+	if(shotTimer>1.5f)
+	{
+		shotTimer = 0.0f;
 	}
 }
 
@@ -154,12 +166,14 @@ void MyApp::DeployEnemy()
 	Enemy* ptr =FindDeadNode(mEnemies);
 	if(ptr == nullptr)return;
 
+	ptr->attackBool = false;
 	ptr->mHealth = 100.0f;
 	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
 	int i = rand() % (int)(4 - 0 + 1);
 	//ptr->mPos = mSpawnLocations[i];
 	ptr->mScale = 0.03f;
 	ptr->SetPos(mSpawnLocations[i]);
+	ptr->shotTimer = 0.0f;
 	ptr->mEnemyPos = &mPlayer.mPos;
 	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
 	
@@ -177,6 +191,21 @@ void MyApp::FireShot()
 	ptr->mVelocity = mPlayer.RotateVector(Vector3(3,-3.6f,20));
 	ptr->mScale=0.4f;
 }
+
+void MyApp::FireEnemyShot(Enemy* enemy)
+{
+	Bullet* ptr = FindDeadNode(mBullets);
+	if(ptr== nullptr)return;
+	
+	//mEnergy--;
+	ptr->mHealth=100;
+	ptr->mLifetime= 3.0f;
+	ptr->SetPos(enemy->mPos);
+	ptr->mPos.y+=3;
+	ptr->mVelocity =  mPlayer.mPos - enemy->mPos;
+	ptr->mScale=0.4f;
+}
+
 void MyApp::FireCluster()
 {
 	/*
@@ -647,6 +676,17 @@ void MyApp::Update()
 	UpdateAliveNodes(mBullets);
 	UpdateAliveNodes(mClusters);
 	//CheckCollisions();
+
+	for(unsigned i = 0;i<mEnemies.size();i++)
+	{
+		if(mEnemies[i]->attackBool)
+		{
+			if(mEnemies[i]->shotTimer==0.0f)
+			{
+				FireEnemyShot(mEnemies[i]);
+			}
+		}
+	}
 
 	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
