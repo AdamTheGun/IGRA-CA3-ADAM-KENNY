@@ -37,6 +37,28 @@ public:
 	virtual void Update();
 };
 
+class Enemy : public DrawableNode
+{
+public:
+	Enemy(std::vector<Vector3>);
+	//~Enemy();
+	Vector3 mVelocity,mDirection;
+	Vector3* mEnemyPos;
+	BOOL attackBool;
+	void Update();
+	void Activate();
+};
+
+Enemy::Enemy(std::vector<Vector3> mPosition)
+{
+	mVelocity = Vector3(0,0,0);
+	mDirection = Vector3(0,0,0);
+	int i = rand() % (int)(4 - 0 + 1);
+	mPos = mPosition[i];
+	mHealth = 100.0f;
+	attackBool = false;
+};
+
 class MyApp:public App
 {
 	void Startup();
@@ -46,6 +68,8 @@ class MyApp:public App
 	void FireShot();
 	void FireCluster();
 	void CheckCollisions();	
+	void DeployEnemy();
+	float GetHeight(Vector3);
 
 	Vector2 mCentreOfScreen;
 
@@ -54,12 +78,13 @@ class MyApp:public App
 	std::unique_ptr<PrimitiveBatch<ColouredVertex>> mpDraw3D;
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
-	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj;
+	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj;
 	void DrawShadows(const Matrix& view,const Matrix& proj) ;
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 	std::vector<Bullet*> mBullets;
 	std::vector<Bullet*> mClusters;
+	std::vector<Enemy*> mEnemies;
 	
 	//ArcBallCamera mCamera;
 	CameraNode mCamera;
@@ -79,14 +104,18 @@ class MyApp:public App
 
 	float mClusterActive, mClusterTimer;
 
-	std::unique_ptr<Terrain> mpTerrain;
 	TerrainMaterial mTerrainMat;
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont;
  	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
 
+	std::vector<Vector3> mSpawnLocations;
+
 	std::wstring testStr;
+
+	public :
+		std::unique_ptr<Terrain> mpTerrain;
 };
 
 void Bullet::Update()
@@ -98,6 +127,44 @@ void Bullet::Update()
 		Kill();//Kills self
 	}
 }
+
+void Enemy::Update()
+{
+	if(Vector3::Distance((*mEnemyPos),mPos)>25)
+	{
+		mVelocity = (*(mEnemyPos) - GetPos())/3;
+		mPos+=mVelocity*Timer::GetDeltaTime();
+		
+		//mPos.y = MyApp::GetHeight(mPos);
+	}
+	LookAt(*(mEnemyPos));
+	if(mHealth<0)
+	{
+		Kill();
+	}
+	if(attackBool == true)
+	{
+		//Move the enemy to player
+	}
+}
+
+
+void MyApp::DeployEnemy()
+{
+	Enemy* ptr =FindDeadNode(mEnemies);
+	if(ptr == nullptr)return;
+
+	ptr->mHealth = 100.0f;
+	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
+	int i = rand() % (int)(4 - 0 + 1);
+	//ptr->mPos = mSpawnLocations[i];
+	ptr->mScale = 0.03f;
+	ptr->SetPos(mSpawnLocations[i]);
+	ptr->mEnemyPos = &mPlayer.mPos;
+	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
+	
+}
+
 void MyApp::FireShot()
 {
 	Bullet* ptr = FindDeadNode(mBullets);
@@ -192,6 +259,7 @@ void MyApp::Startup()
 	mSkyObj.Load(GetDevice(),mpShaderManager.get(),
                                L"../Content/skyball.obj",false);
 	mYellowBallObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/yellow_ball.obj");
+	mEnemyObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Cube-Soldier.obj");
 	mpCubemap.Attach(CreateTextureResourceDDS(GetDevice(),
                                L"../Content/Cubemaps/grasscube1024.dds"));
 	
@@ -211,6 +279,7 @@ void MyApp::Startup()
 		mClusters.push_back(ptr);
 	}
 
+	
 	mShadowMaterial.mpShaderManager=mpShaderManager.get();
 	mShadowMaterial.mpVS=mpShaderManager->VSDefault();
 	mShadowMaterial.mpLayout=mpShaderManager->LayoutDefault();
@@ -251,6 +320,21 @@ void MyApp::Startup()
 	mRobot.mMaterial.mMaterial.gMaterial.Reflect=Color(0.1f,0.1f,1,1)*0.5f;
 	mRobot.mMaterial.mMaterial.gEnableReflection=true;
 
+	mSpawnLocations.push_back(Vector3(-100,mpTerrain->GetHeight(-100,10),10));
+	mSpawnLocations.push_back(Vector3(-10,mpTerrain->GetHeight(-10,-100),-100));
+	mSpawnLocations.push_back(Vector3(85,mpTerrain->GetHeight(85,-30),-30));
+	mSpawnLocations.push_back(Vector3(90,mpTerrain->GetHeight(90,90),90));
+	mSpawnLocations.push_back(Vector3(-60,mpTerrain->GetHeight(-60,60),60));
+
+	for(unsigned i = 0;i < 10;i++)
+	{
+		Enemy* ptr = new Enemy(mSpawnLocations);
+		ptr->Init(&mEnemyObj);
+		ptr->Kill();
+		mEnemies.push_back(ptr);
+	}
+
+
 	mHealth = 100.0f;
 	mEnergy = 100.0f;
 	mScore = 0;
@@ -264,7 +348,7 @@ void MyApp::Startup()
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 
-	mPlayer.Init(&mRobot, Vector3(0,0,0));
+	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
 	
 	maxHeight = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 2;
@@ -285,6 +369,8 @@ void MyApp::Startup()
 
 	mCurrentCamMode = mTPScam;
 	mCurrentCamAngle = mTPSangle;
+
+
 }
 void MyApp::Draw()
 {
@@ -325,6 +411,13 @@ void MyApp::Draw()
 	mpTerrain->Draw(GetContext());
 	//mpTerrain->Draw(GetContext());
 
+	for(unsigned i = 0;i<mSpawnLocations.size();i++)
+	{
+		world= Matrix::CreateScale(0.2f) * Matrix::CreateTranslation(mSpawnLocations[i]);
+		mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
+		mBarracksObj.mMaterial.Apply(GetContext());
+		mBarracksObj.Draw(GetContext());
+	}
 	
 
 	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
@@ -352,6 +445,7 @@ void MyApp::Draw()
 
 	DrawAliveNodes(mBullets,GetContext(),view,proj);
 	DrawAliveNodes(mClusters,GetContext(),view,proj);
+	DrawAliveNodes(mEnemies,GetContext(),view,proj);
 	
 	GetContext()->OMSetDepthStencilState(
                             mpShaderManager->CommonStates()->DepthDefault(),0);
@@ -365,13 +459,18 @@ void MyApp::Draw()
 
 	const RECT* rect = &rec;
 	
+	std::wstring posx = ToString(mPlayer.mPos.x);
+	std::wstring posz = ToString(mPlayer.mPos.z);
+
 	mpSpriteBatch->Begin();
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 	std::wstring scoreStr = ToString("Score: "+mScore);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(199,199), Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(200,200), Colors::White);
+	/*mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(199,199), Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(200,200), Colors::White);*/
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),posx.c_str(),Vector2(199,199), Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),posz.c_str(),Vector2(200,220), Colors::White);
 	mpSpriteBatch->End();
 
 	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
@@ -535,13 +634,23 @@ void MyApp::Update()
 	}
 #pragma endregion
 	
+	if(Input::KeyPress(VK_UP))
+	{
+		DeployEnemy();
+	}
+
+
+
+
+
+	UpdateAliveNodes(mEnemies);
 	UpdateAliveNodes(mBullets);
 	UpdateAliveNodes(mClusters);
 	//CheckCollisions();
 
 	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
-	float MOVE_SPEED = 5;
+	float MOVE_SPEED = 50;
 	float TURN_SPEED = XMConvertToRadians(60);
 	Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
 	Vector3 turn = GetMouseTurn();
