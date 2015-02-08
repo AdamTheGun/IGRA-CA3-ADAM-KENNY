@@ -42,7 +42,7 @@ class Enemy : public DrawableNode
 public:
 	Enemy(std::vector<Vector3>);
 	//~Enemy();
-	Vector3 mVelocity,mDirection;
+	Vector3 mVelocity,mDirection,mPrevPos;
 	Vector3* mEnemyPos;
 	BOOL attackBool;
 	float shotTimer;
@@ -70,7 +70,7 @@ class MyApp:public App
 	void FireEnemyShot(Enemy*);
 	void FireCluster();
 	void CheckCollisions();	
-	void DeployEnemy();
+	void DeployEnemy(int);
 	float GetHeight(Vector3);
 
 	Vector2 mCentreOfScreen;
@@ -102,6 +102,7 @@ class MyApp:public App
 	float mEnergy;
 	int mScore;
 	float mRecoverDelay;
+	float mSpawnDelay;
 	float mEnergyBlink, mAlphaModifier;
 
 	float mClusterActive, mClusterTimer;
@@ -134,15 +135,16 @@ void Enemy::Update()
 {
 	if(Vector3::Distance((*mEnemyPos),mPos)>25)
 	{
+		mPrevPos = mPos;
 		mVelocity = (*(mEnemyPos) - GetPos())/3;
+		//Move(-(mVelocity*Timer::GetDeltaTime()));
 		mPos+=mVelocity*Timer::GetDeltaTime();
 		attackBool = false;
 		//mPos.y = MyApp::GetHeight(mPos);
 	}
 	else 
 	{
-		attackBool  =true;
-
+		attackBool = true;
 	}
 	
 	LookAt(*(mEnemyPos));
@@ -161,7 +163,7 @@ void Enemy::Update()
 }
 
 
-void MyApp::DeployEnemy()
+void MyApp::DeployEnemy(int loc)
 {
 	Enemy* ptr =FindDeadNode(mEnemies);
 	if(ptr == nullptr)return;
@@ -169,10 +171,10 @@ void MyApp::DeployEnemy()
 	ptr->attackBool = false;
 	ptr->mHealth = 100.0f;
 	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
-	int i = rand() % (int)(4 - 0 + 1);
+	//int i = rand() % (int)(4 - 0 + 1);
 	//ptr->mPos = mSpawnLocations[i];
 	ptr->mScale = 0.03f;
-	ptr->SetPos(mSpawnLocations[i]);
+	ptr->SetPos(mSpawnLocations[loc]);
 	ptr->shotTimer = 0.0f;
 	ptr->mEnemyPos = &mPlayer.mPos;
 	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
@@ -363,6 +365,7 @@ void MyApp::Startup()
 		mEnemies.push_back(ptr);
 	}
 
+	mSpawnDelay = 0.0f;
 
 	mHealth = 100.0f;
 	mEnergy = 100.0f;
@@ -665,16 +668,47 @@ void MyApp::Update()
 	
 	if(Input::KeyPress(VK_UP))
 	{
-		DeployEnemy();
+		//DeployEnemy();
 	}
 
+	for(unsigned i =0;i<mSpawnLocations.size();i++ )
+	{
+		if(Vector3::Distance(mPlayer.mPos,mSpawnLocations[i])<=50)
+		{
+			if(mSpawnDelay<1.5f)
+			{
+				mSpawnDelay+=Timer::GetDeltaTime();
+			}
+			else
+			{
+				mSpawnDelay = 0.0f;
+			}
+			if(mSpawnDelay==0.0f)
+			{
+				DeployEnemy(i);
+			}
+		}
+	}
 
-
-
+	
 
 	UpdateAliveNodes(mEnemies);
 	UpdateAliveNodes(mBullets);
 	UpdateAliveNodes(mClusters);
+	
+	for(unsigned i = 0;i<mEnemies.size();i++)
+	{
+		if(mEnemies[i]->IsAlive())
+		{
+			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
+			if(mEnemies[i]->mPos.y>maxHeight)
+			{
+				mEnemies[i]->mPos.y = maxHeight;
+				mEnemies[i]->mPos = mEnemies[i]->mPrevPos;
+			}
+		}
+	}
+
 	//CheckCollisions();
 
 	for(unsigned i = 0;i<mEnemies.size();i++)
