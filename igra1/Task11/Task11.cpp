@@ -203,7 +203,7 @@ void MyApp::FireEnemyShot(Enemy* enemy)
 	ptr->mHealth=100;
 	ptr->mLifetime= 3.0f;
 	ptr->SetPos(enemy->mPos);
-	ptr->mPos.y+=3;
+	ptr->mPos.y+=1;
 	ptr->mVelocity =  mPlayer.mPos - enemy->mPos;
 	ptr->mScale=0.4f;
 }
