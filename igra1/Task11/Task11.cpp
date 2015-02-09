@@ -86,6 +86,7 @@ class MyApp:public App
 	void FireCluster();
 	void CheckCollisions();	
 	void DeployEnemy(int);
+	void SetupBarracks();
 	float GetHeight(Vector3);
 
 	Vector2 mCentreOfScreen;
@@ -102,6 +103,7 @@ class MyApp:public App
 	std::vector<Bullet*> mBullets;
 	std::vector<Bullet*> mClusters;
 	std::vector<Enemy*> mEnemies;
+	std::vector<DrawableNode*> mBarracks;
 	
 	//ArcBallCamera mCamera;
 	CameraNode mCamera;
@@ -130,12 +132,12 @@ class MyApp:public App
 	TerrainMaterial mTerrainMat;
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
-	std::unique_ptr<SpriteFont> mpSpriteFont;
+	std::unique_ptr<SpriteFont> mpSpriteFont,mpSpriteFont16;
  	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
 
 	std::vector<Vector3> mSpawnLocations;
 
-	std::wstring testStr;
+	std::wstring strClusterCD, strCluster;
 
 	public :
 		std::unique_ptr<Terrain> mpTerrain;
@@ -196,12 +198,24 @@ void MyApp::DeployEnemy(int loc)
 	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
 	//int i = rand() % (int)(4 - 0 + 1);
 	//ptr->mPos = mSpawnLocations[i];
-	ptr->mScale = 0.03f;
-	ptr->SetPos(mSpawnLocations[loc]);
+	ptr->mScale = 0.02f;
+	ptr->SetPos(mSpawnLocations[loc] + Vector3(4,0,0));
 	ptr->shotTimer = 0.0f;
 	ptr->mEnemyPos = &mPlayer.mPos;
 	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
 	ptr->mTooNearBool = false;
+}
+void MyApp::SetupBarracks()
+{
+	for(int i = 0; i < mSpawnLocations.size(); i++)
+	{
+		DrawableNode* ptr = FindDeadNode(mBarracks);
+		if(ptr == nullptr)return;
+
+		ptr->mHealth = 500.0f;
+		ptr->mScale = 0.18f;
+		ptr->SetPos(mSpawnLocations[i] + Vector3(0,0.6f,0));
+	}
 }
 
 void MyApp::FireShot()
@@ -212,8 +226,8 @@ void MyApp::FireShot()
 	mEnergy--;
 	ptr->mHealth=100;
 	ptr->mLifetime= 3.0f;
-	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-0.75f,3.8f,1)));
-	ptr->mVelocity = mPlayer.RotateVector(Vector3(3,-3.6f,20));
+	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-1,1.2f,1)));
+	ptr->mVelocity = mPlayer.RotateVector(Vector3(2.5f,-3.6f,20));
 	ptr->mScale=0.4f;
 }
 
@@ -244,16 +258,16 @@ void MyApp::FireCluster()
 	//float rot = 40;
 	ISound* clustershot = sfxEngine->play2D("../Content/Sounds/Shotgun.mp3",false);
 	ISound* missleLaunch = sfxEngine->play2D("../Content/Sounds/Missile-Launch.mp3",false);
-
+	float rot = -70;
 	for(int i = 0; i < mClusters.size(); i++)
 	{
-		float rot = randf(-40, 40);
+		//float rot = randf(-40, 40);
 		Bullet* ptr = mClusters[i];
 		ptr->mHealth=100;
 		ptr->mLifetime= 3.0f;
 		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,3,-0.8f)));
 		//ptr->Yaw(mPlayer.GetHpr().z);
-		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot));
+		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot + i*20));
 		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
 		ptr->mScale=0.6f;
 	}
@@ -404,6 +418,14 @@ void MyApp::Startup()
 		mEnemies.push_back(ptr);
 	}
 
+	for(unsigned i = 0; i < mSpawnLocations.size(); i++)
+	{
+		DrawableNode* ptr = new DrawableNode();
+		ptr->Init(&mBarracksObj);
+		ptr->Kill();
+		mBarracks.push_back(ptr);
+	}
+
 	mSpawnDelay = 0.0f;
 
 	mHealth = 100.0f;
@@ -417,31 +439,32 @@ void MyApp::Startup()
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
+	mpSpriteFont16.reset(new SpriteFont(GetDevice(),L"../Content/Times16.sprfont"));
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 
 	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
 	
-	maxHeight = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 2;
+	maxHeight = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 10;
 
 	/*mTPScam = Vector3(-2,7,-8);
 	mTPSangle = Vector3(0,3,4);*/
-	mTPScam = Vector3(-2,7,-15);
+	mTPScam = Vector3(-2,6,-8);
 	mTPSangle = Vector3(0,3,4);
 
-	mFPScam = Vector3(0,4.5f,1);
-	mFPSangle = Vector3(0,3,5);
+	mFPScam = Vector3(0,3,1);
+	mFPSangle = Vector3(0,2,4);
 
-	mShoulderCam = Vector3(2,5,-2);
-	mShoulderAngle = Vector3(0,4,6);
+	mShoulderCam = Vector3(1.5f,2,-1.5f);
+	mShoulderAngle = Vector3(1,2,5);
 
-	mBackCam = Vector3(2,6,3);
+	mBackCam = Vector3(2,4,5);
 	mBackAngle = Vector3(0,2,-6);
 
 	mCurrentCamMode = mTPScam;
 	mCurrentCamAngle = mTPSangle;
 
-
+	SetupBarracks();
 }
 void MyApp::Draw()
 {
@@ -500,13 +523,13 @@ void MyApp::Draw()
 	mpTerrain->Draw(GetContext());
 	//mpTerrain->Draw(GetContext());
 
-	for(unsigned i = 0;i<mSpawnLocations.size();i++)
-	{
-		world= Matrix::CreateScale(0.2f) * Matrix::CreateTranslation(mSpawnLocations[i]);
+	//for(unsigned i = 0;i<mSpawnLocations.size();i++)
+	//{
+		/*world= Matrix::CreateScale(0.2f) * Matrix::CreateTranslation(mSpawnLocations[i] + Vector3(0,2,0));
 		mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
 		mBarracksObj.mMaterial.Apply(GetContext());
-		mBarracksObj.Draw(GetContext());
-	}
+		mBarracksObj.Draw(GetContext());*/
+	//}
 	
 	
 	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
@@ -531,6 +554,7 @@ void MyApp::Draw()
 	DrawAliveNodes(mBullets,GetContext(),view,proj);
 	DrawAliveNodes(mClusters,GetContext(),view,proj);
 	DrawAliveNodes(mEnemies,GetContext(),view,proj);
+	DrawAliveNodes(mBarracks,GetContext(),view,proj);
 	
 	GetContext()->OMSetDepthStencilState(
                             mpShaderManager->CommonStates()->DepthDefault(),0);
@@ -543,19 +567,27 @@ void MyApp::Draw()
 	rec.bottom = 75;
 
 	const RECT* rect = &rec;
-	
-	std::wstring posx = ToString(mPlayer.mPos.x);
-	std::wstring posz = ToString(mPlayer.mPos.z);
+
+	if(mClusterActive)
+	{
+		strCluster=L"Cluster: Recharging";
+		strClusterCD = ToString("Cooldown: ", (int)(4 - mClusterTimer));
+	}
+	else
+	{
+		strCluster=L"Cluster: Active";
+		strClusterCD=L"";
+	}
 
 	mpSpriteBatch->Begin();
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 	std::wstring scoreStr = ToString("Score: "+mScore);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
-	/*mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(199,199), Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),testStr.c_str(),Vector2(200,200), Colors::White);*/
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),posx.c_str(),Vector2(199,199), Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),posz.c_str(),Vector2(200,220), Colors::White);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(50, 60),Colors::Black);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(51, 61),Colors::White);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(50, 80),Colors::Black);
+	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(51, 81),Colors::White);
 	mpSpriteBatch->End();
 
 	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
@@ -658,18 +690,20 @@ void MyApp::Update()
 		{
 			for(int i = 0; i < mClusters.size(); i++)
 			{
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 12, -50 + (200 * mClusterTimer)));
+				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 5, -30 + (150 * mClusterTimer)));
 			}
 		}
 		else
 		{
 			for(int i = 0; i < mClusters.size(); i++)
 			{
-				float randX = randf(-5, 5);
-				float randY = randf(-10, 0);
+				float randX = randf(-40, 40);
+				float randY = randf(-20, -15);
 				//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
 				//mClusters[i]->LookAt(Vector3(0, 0, randZ));
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+				//mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+				mClusters[i]->SetHpr(mClusters[i]->GetHpr().x, 0, 0);
+				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 15));
 			}
 		}
 
@@ -753,7 +787,7 @@ void MyApp::Update()
 	{
 		if(mEnemies[i]->IsAlive())
 		{
-			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
+			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z) + 1.2f;
 			/*if(mEnemies[i]->mPos.y>maxHeight)
 			{
 				mEnemies[i]->mPos.y = maxHeight;
@@ -805,7 +839,7 @@ void MyApp::Update()
 	turn.y = 0;
 
 	mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
-	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
+	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 3;
 
 	if(move==Vector3(0,0,0))
 	{
@@ -827,7 +861,6 @@ void MyApp::Update()
 		mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
 
 	mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
-	testStr = ToString("Cluster Timer: ", mClusterTimer);
 
 	mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
 	mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
