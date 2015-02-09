@@ -16,6 +16,9 @@
     <Filter Include="Shaders">
       <UniqueIdentifier>{09a66c9c-7032-41f3-8f29-f12ad0eb126f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\irrKlang">
+      <UniqueIdentifier>{db2f0fb9-4f82-4949-acc9-3160f51d24ae}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -63,6 +66,69 @@
     <ClInclude Include="Terrain.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ik_ESoundEngineOptions.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ESoundOutputDrivers.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_EStreamModes.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IAudioRecorder.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IAudioStream.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IAudioStreamLoader.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IFileFactory.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IFileReader.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IRefCounted.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_irrKlangTypes.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISound.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundDeviceList.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundEffectControl.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundEngine.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundMixedOutputReceiver.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundSource.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_ISoundStopEventReceiver.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_IVirtualRefCounted.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_SAudioStreamFormat.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="ik_vec3d.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
+    <ClInclude Include="irrKlang.h">
+      <Filter>Header Files\irrKlang</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="IgraApp.cpp">
@@ -103,6 +169,12 @@
     <None Include="Skybox.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="irrKlang.dll">
+      <Filter>Header Files\irrKlang</Filter>
+    </None>
+    <None Include="irrKlang.exp">
+      <Filter>Header Files\irrKlang</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="..\Task04\Shaders\PS_Coloured.hlsl">
@@ -141,5 +213,10 @@
     <FxCompile Include="PS_skybox.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="irrKlang.lib">
+      <Filter>Header Files\irrKlang</Filter>
+    </Library>
   </ItemGroup>
 </Project>

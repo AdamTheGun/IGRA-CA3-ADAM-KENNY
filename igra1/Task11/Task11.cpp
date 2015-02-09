@@ -19,6 +19,20 @@
 
 #include "Vertex.h"	// the IGRA vertex structures
 
+#include <mmsystem.h>
+#include <stdio.h>
+#include <irrKlang.h>
+
+using namespace irrklang;
+
+#pragma comment(lib, "irrKlang.lib")
+
+#if defined(WIN32)
+#include <conio.h>
+#else
+#include "../common/conio.h"
+#endif
+
 #include "GeometryGenerator.h"	// the IGRA vertex structures
 # define M_PI           3.14159265358979323846  /* pi */
 #define D3DXToRadian(degree) ((degree) * (M_PI / 180.0f))
@@ -45,6 +59,7 @@ public:
 	Vector3 mVelocity,mDirection,mPrevPos;
 	Vector3* mEnemyPos;
 	BOOL attackBool;
+	BOOL mTooNearBool;
 	float shotTimer;
 	void Update();
 	void Activate();
@@ -93,10 +108,15 @@ class MyApp:public App
 	Vector3 mCurrentCamMode, mCurrentCamAngle;
 	Vector3 mTPScam, mFPScam, mShoulderCam, mBackCam;
 	Vector3 mTPSangle, mFPSangle, mShoulderAngle, mBackAngle;
+	
 
 	DrawableNode mPlayer;
 	float maxHeight;
 	
+	irrklang::ISoundEngine* engine;
+	irrklang::ISoundEngine* sfxEngine;
+	float mVolume;
+
 	//Temp Variables
 	float mHealth;
 	float mEnergy;
@@ -136,7 +156,10 @@ void Enemy::Update()
 	if(Vector3::Distance((*mEnemyPos),mPos)>25)
 	{
 		mPrevPos = mPos;
-		mVelocity = (*(mEnemyPos) - GetPos())/3;
+		if(!mTooNearBool)
+		{
+			mVelocity = (*(mEnemyPos) - GetPos())/3;
+		}
 		//Move(-(mVelocity*Timer::GetDeltaTime()));
 		mPos+=mVelocity*Timer::GetDeltaTime();
 		attackBool = false;
@@ -178,7 +201,7 @@ void MyApp::DeployEnemy(int loc)
 	ptr->shotTimer = 0.0f;
 	ptr->mEnemyPos = &mPlayer.mPos;
 	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
-	
+	ptr->mTooNearBool = false;
 }
 
 void MyApp::FireShot()
@@ -199,6 +222,9 @@ void MyApp::FireEnemyShot(Enemy* enemy)
 	Bullet* ptr = FindDeadNode(mBullets);
 	if(ptr== nullptr)return;
 	
+	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
+
+
 	//mEnergy--;
 	ptr->mHealth=100;
 	ptr->mLifetime= 3.0f;
@@ -216,6 +242,9 @@ void MyApp::FireCluster()
 	*/
 
 	//float rot = 40;
+	ISound* clustershot = sfxEngine->play2D("../Content/Sounds/Shotgun.mp3",false);
+	ISound* missleLaunch = sfxEngine->play2D("../Content/Sounds/Missile-Launch.mp3",false);
+
 	for(int i = 0; i < mClusters.size(); i++)
 	{
 		float rot = randf(-40, 40);
@@ -228,6 +257,7 @@ void MyApp::FireCluster()
 		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
 		ptr->mScale=0.6f;
 	}
+	engine->setSoundVolume(mVolume);
 }
 void MyApp::CheckCollisions()
 {
@@ -261,6 +291,14 @@ void MyApp::Startup()
 	// just create the Shader Manager
 	mpShaderManager.reset(new ShaderManager(GetDevice()));
 	
+	engine = irrklang::createIrrKlangDevice();
+	sfxEngine = irrklang::createIrrKlangDevice();
+
+	ISound* music = engine->play2D("../Content/Sounds/Tank.mp3",true);
+	mVolume = 0.1f;
+	engine->setSoundVolume(mVolume);
+	sfxEngine->setSoundVolume(0.8f);
+
 	// initial pos/tgt for camera
 	//mCamera.Reset();
 
@@ -701,10 +739,31 @@ void MyApp::Update()
 		if(mEnemies[i]->IsAlive())
 		{
 			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
-			if(mEnemies[i]->mPos.y>maxHeight)
+			/*if(mEnemies[i]->mPos.y>maxHeight)
 			{
 				mEnemies[i]->mPos.y = maxHeight;
 				mEnemies[i]->mPos = mEnemies[i]->mPrevPos;
+			}*/
+			for(unsigned e = 0;e<mEnemies.size();e++)
+			{
+				if(mEnemies[e]->IsAlive())
+				{
+					if(mEnemies[i]!=mEnemies[e])
+					{
+						if(Vector3::Distance(mEnemies[i]->mPos,mEnemies[e]->mPos)>10)
+						{
+							mEnemies[i]->mTooNearBool = false;
+							mEnemies[e]->mTooNearBool = false;
+						}
+						if(Vector3::Distance(mEnemies[i]->mPos,mEnemies[e]->mPos)<10)
+						{
+							mEnemies[i]->mTooNearBool = true;
+							mEnemies[e]->mTooNearBool = true;
+							mEnemies[i]->mVelocity = -(mEnemies[e]->mPos-mEnemies[i]->mPos);
+							mEnemies[e]->mVelocity = -(mEnemies[i]->mPos-mEnemies[e]->mPos);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -722,9 +781,9 @@ void MyApp::Update()
 		}
 	}
 
-	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
+	//Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
-	float MOVE_SPEED = 50;
+	float MOVE_SPEED = 15;
 	float TURN_SPEED = XMConvertToRadians(60);
 	Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
 	Vector3 turn = GetMouseTurn();
@@ -732,6 +791,22 @@ void MyApp::Update()
 
 	mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
 	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
+
+	if(move==Vector3(0,0,0))
+	{
+		if(mVolume>0.1f)
+		{
+			mVolume -= 0.2f*Timer::GetDeltaTime();
+		}
+	}
+	else
+	{
+		if(mVolume<=0.8f)
+		{
+			mVolume += 0.1f*Timer::GetDeltaTime();
+		}
+	}
+	engine->setSoundVolume(mVolume);
 
 	if(mPlayer.mPos.y > maxHeight)
 		mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
@@ -747,6 +822,8 @@ void MyApp::Update()
 void MyApp::Shutdown()
 {
 	DeleteAllNodes(mBullets);
+	DeleteAllNodes(mEnemies);
+	engine->drop();
 }
 
 // in console C++ is was main()

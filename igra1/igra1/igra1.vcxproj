@@ -85,6 +85,27 @@
     <ClInclude Include="GeometryGenerator.h" />
     <ClInclude Include="IgraApp.h" />
     <ClInclude Include="IgraUtils.h" />
+    <ClInclude Include="ik_ESoundEngineOptions.h" />
+    <ClInclude Include="ik_ESoundOutputDrivers.h" />
+    <ClInclude Include="ik_EStreamModes.h" />
+    <ClInclude Include="ik_IAudioRecorder.h" />
+    <ClInclude Include="ik_IAudioStream.h" />
+    <ClInclude Include="ik_IAudioStreamLoader.h" />
+    <ClInclude Include="ik_IFileFactory.h" />
+    <ClInclude Include="ik_IFileReader.h" />
+    <ClInclude Include="ik_IRefCounted.h" />
+    <ClInclude Include="ik_irrKlangTypes.h" />
+    <ClInclude Include="ik_ISound.h" />
+    <ClInclude Include="ik_ISoundDeviceList.h" />
+    <ClInclude Include="ik_ISoundEffectControl.h" />
+    <ClInclude Include="ik_ISoundEngine.h" />
+    <ClInclude Include="ik_ISoundMixedOutputReceiver.h" />
+    <ClInclude Include="ik_ISoundSource.h" />
+    <ClInclude Include="ik_ISoundStopEventReceiver.h" />
+    <ClInclude Include="ik_IVirtualRefCounted.h" />
+    <ClInclude Include="ik_SAudioStreamFormat.h" />
+    <ClInclude Include="ik_vec3d.h" />
+    <ClInclude Include="irrKlang.h" />
     <ClInclude Include="LightHelper.h" />
     <ClInclude Include="ModelLoad.h" />
     <ClInclude Include="ModelObj.h" />
@@ -108,6 +129,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\Task04\Shaders\LightHelper.hlsli" />
+    <None Include="irrKlang.dll" />
+    <None Include="irrKlang.exp" />
     <None Include="Skybox.hlsli" />
     <None Include="Terrain.hlsli" />
   </ItemGroup>
@@ -181,6 +204,9 @@
       <ObjectFileOutput Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\Content\Shaders\%(Filename).cso</ObjectFileOutput>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">4.0_level_9_3</ShaderModel>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Library Include="irrKlang.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
