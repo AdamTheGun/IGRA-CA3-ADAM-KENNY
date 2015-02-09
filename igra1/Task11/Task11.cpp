@@ -303,6 +303,12 @@ void MyApp::CheckEnemyCollisions()
 			{
 				mBullets[b]->Kill();
 				mEnemies[t]->mHealth-=25;
+				mScore += 10;
+
+				if(mEnemies[t]->mHealth <= 0)
+				{
+					mScore += 20;
+				}
 			}
 		}
 	}
@@ -323,6 +329,8 @@ void MyApp::CheckEnemyCollisions()
 				{
 					mBullets[c]->Kill();
 					mEnemies[t]->mHealth-=25;
+
+					mScore += 10;
 				}
 			}
 		}
@@ -339,7 +347,7 @@ void MyApp::CheckPlayerCollisions()
 		if(bs.Intersects(mPlayer.GetBounds()))
 		{
 			mEnemyBullets[b]->Kill();
-			mPlayer.mHealth -= 25;
+			mEnergy -= 2;
 		}
 	}
 }
@@ -584,7 +592,6 @@ void MyApp::Draw()
 	mPlane.mMaterial.Apply(GetContext());
 	mPlane.Draw(GetContext());
 	
-	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
 	world= Matrix::CreateTranslation(0,0,0);
@@ -659,7 +666,7 @@ void MyApp::Draw()
 
 	mpSpriteBatch->Begin();
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
-	std::wstring scoreStr = ToString("Score: "+mScore);
+	std::wstring scoreStr = ToString("Score: ", mScore);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(50, 60),Colors::Black);
@@ -896,7 +903,7 @@ void MyApp::Update()
 		{
 			if(mEnemies[i]->IsAlive())
 			{
-				mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
+				mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z) + 1.5f;
 				/*if(mEnemies[i]->mPos.y>maxHeight)
 				{
 					mEnemies[i]->mPos.y = maxHeight;
