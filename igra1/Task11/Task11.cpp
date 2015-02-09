@@ -332,6 +332,12 @@ void MyApp::Startup()
 	mpCubemap.Attach(CreateTextureResourceDDS(GetDevice(),
                                L"../Content/Cubemaps/grasscube1024.dds"));
 	
+	mSkyObj.mMaterial.mpVS=mpShaderManager->VSSkybox();
+	mSkyObj.mMaterial.mpLayout=mpShaderManager->LayoutSkybox();
+	mSkyObj.mMaterial.mpPS=mpShaderManager->PSSkybox();
+	mSkyObj.mMaterial.mpTexture=mpCubemap;
+	mSkyObj.mMaterial.mMaterial.gUseTexture=true;
+
 	for(int i = 0;i<20;i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -377,12 +383,7 @@ void MyApp::Startup()
 	dsd.BackFace=dsd.FrontFace;
 	// make it:
 	GetDevice()->CreateDepthStencilState(&dsd,&mpShadowStencil);
-
-	mSkyObj.mMaterial.mpVS=mpShaderManager->VSSkybox();
-	mSkyObj.mMaterial.mpLayout=mpShaderManager->LayoutSkybox();
-	mSkyObj.mMaterial.mpPS=mpShaderManager->PSSkybox();
-	mSkyObj.mMaterial.mpTexture=mpCubemap;
-	mSkyObj.mMaterial.mMaterial.gUseTexture=true;
+	
 
 	mRobot.mMaterial.mMaterial.gMaterial.Specular=Color(1,1,1,1);
 	mRobot.mMaterial.mMaterial.gMaterial.Specular.w=20;	// power
@@ -467,11 +468,29 @@ void MyApp::Draw()
 	Matrix view=mCamera.GetViewMatrix();
 	Matrix proj=mCamera.GetProjectionMatrix();
 
+	// Clear our backbuffer
+	GetContext()->ClearDepthStencilView(GetDepthStencilView(),
+                                  D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL,1,0);
+	GetContext()->ClearRenderTargetView(GetRenderTargetView(),
+                                  Colors::SkyBlue);
+	// Set common rendering flags
+	GetContext()->IASetPrimitiveTopology(
+                            D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+	GetContext()->OMSetDepthStencilState(
+                            mpShaderManager->CommonStates()->DepthDefault(),0);
+	ShaderManager::SetSampler(GetContext(),
+                            mpShaderManager->CommonStates()->LinearWrap());
+	
+	world= Matrix::CreateTranslation(mCamera.GetPos());
+	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
+	mSkyObj.mMaterial.Apply(GetContext());
+	mSkyObj.Draw(GetContext());
 	// the models:
 	world=Matrix::CreateTranslation(0,0,0);
 	mPlane.mMaterial.FillMatrixes(world,view,proj);
 	mPlane.mMaterial.Apply(GetContext());
 	mPlane.Draw(GetContext());
+	
 	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
@@ -489,7 +508,7 @@ void MyApp::Draw()
 		mBarracksObj.Draw(GetContext());
 	}
 	
-
+	
 	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
 	//mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
 	//mBarracksObj.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
@@ -507,10 +526,6 @@ void MyApp::Draw()
 	mPlayer.mScale = 0.1f;
 	//DrawShadows(view,proj);
 	// draw sky
-	world= Matrix::CreateTranslation(mCamera.GetPos());
-	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
-	mSkyObj.mMaterial.Apply(GetContext());
-	mSkyObj.Draw(GetContext());
 	// Present the backbuffer to the screen
 
 	DrawAliveNodes(mBullets,GetContext(),view,proj);
@@ -781,7 +796,7 @@ void MyApp::Update()
 		}
 	}
 
-	//Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
+	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
 	float MOVE_SPEED = 15;
 	float TURN_SPEED = XMConvertToRadians(60);
