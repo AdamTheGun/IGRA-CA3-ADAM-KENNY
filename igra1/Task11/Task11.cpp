@@ -721,46 +721,11 @@ void MyApp::Update()
 	if (Input::KeyPress(VK_ESCAPE))
 			CloseWin();
 
-<<<<<<< HEAD
 	if(mEnergy>0.0f){
-
 	#pragma region Player Shooting Functions & Effects
 		if(mEnergy<=100.0f){
 			if(Input::KeyDown(VK_UP))
 				mEnergy++;
-=======
-#pragma region Player Shooting Functions & Effects
-	if(mEnergy<=100.0f){
-		if(Input::KeyDown(VK_UP))
-			mEnergy++;
-	}
-	if(mEnergy>=0)
-	{
-		if(Input::KeyDown(VK_DOWN))
-			mEnergy--;
-	}
-	if(Input::KeyPress(VK_LBUTTON))
-	{
-		// Shoot regular bullet
-		if(!mClusterArmed)
-		{
-			if (mEnergy>=0)
-			{	
-				mRecoverDelay = 0;
-				FireShot();
-			}
-		}
-		else
-		{
-			for(int i = 0; i < mClusterAoE.size(); i++)
-			{
-				mClusterAoE[i]->Kill();
-			}
-
-			FireCluster();
-			mClusterActive = true;
-			mClusterArmed = false;
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
 		}
 		if(mEnergy>=0)
 		{
@@ -769,47 +734,25 @@ void MyApp::Update()
 		}
 		if(Input::KeyPress(VK_LBUTTON))
 		{
-<<<<<<< HEAD
-			if (mEnergy>=0)
-			{	
-				mRecoverDelay = 0;
-				FireShot();
-=======
-			mEnergy += 4 * Timer::GetDeltaTime();
-		}
-	}
-
-	if(mClusterActive == false)
-	{
-		if(Input::KeyPress(0x5A))
-		{
-			mClusterArmed = !mClusterArmed;
-
+			// Shoot regular bullet
 			if(!mClusterArmed)
+			{
+				if (mEnergy>=0)
+				{	
+					mRecoverDelay = 0;
+					FireShot();
+				}
+			}
+			else
 			{
 				for(int i = 0; i < mClusterAoE.size(); i++)
 				{
 					mClusterAoE[i]->Kill();
 				}
-			}
-		}	
-	}
-	
-	if(mClusterArmed)
-	{
-		DisplayClusterAoE();
-	}
 
-	if(mClusterActive == true)
-	{
-		mClusterTimer += Timer::GetDeltaTime();
-
-		if(mClusterTimer <= 0.5f)
-		{
-			for(int i = 0; i < mClusters.size(); i++)
-			{
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 5, -30 + (150 * mClusterTimer)));
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
+				FireCluster();
+				mClusterActive = true;
+				mClusterArmed = false;
 			}
 		}
 		else
@@ -817,21 +760,11 @@ void MyApp::Update()
 			// Recovery after shooting
 			if(mRecoverDelay <= 1)
 			{
-<<<<<<< HEAD
 				mRecoverDelay += Timer::GetDeltaTime();
 			}
 			else if(mEnergy <= 100.0f)
 			{
 				mEnergy += 4 * Timer::GetDeltaTime();
-=======
-				float randX = randf(-40, 40);
-				float randY = randf(-20, -15);
-				//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
-				//mClusters[i]->LookAt(Vector3(0, 0, randZ));
-				//mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
-				mClusters[i]->SetHpr(mClusters[i]->GetHpr().x, 0, 0);
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 15));
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
 			}
 		}
 
@@ -839,64 +772,24 @@ void MyApp::Update()
 		{
 			if(Input::KeyPress(0x5A))
 			{
-				FireCluster();
-				mClusterActive = true;
+				mClusterArmed = !mClusterArmed;
+
+				if(!mClusterArmed)
+				{
+					for(int i = 0; i < mClusterAoE.size(); i++)
+					{
+						mClusterAoE[i]->Kill();
+					}
+				}
 			}	
 		}
-
-<<<<<<< HEAD
-		if(mClusterActive == true)
-=======
-	CheckEnemyCollisions();
-
-	// Blinking effect when energy is low
-	if(mEnergy <= 20.0f)
-	{
-		if(mEnergyBlink <= 0)
-			mAlphaModifier = 2 * Timer::GetDeltaTime();
-		else if(mEnergyBlink >= 1)
-			mAlphaModifier = -2 * Timer::GetDeltaTime();
-
-		mEnergyBlink += mAlphaModifier;
-	}
-	else
-	{
-		mEnergyBlink = 1.0f;
-	}
-#pragma endregion
-
-#pragma region Camera Modes Switch
-	if (Input::KeyPress(VK_F1))
-	{
-		mCurrentCamMode = mTPScam;
-		mCurrentCamAngle = mTPSangle;
-	}
-	if (Input::KeyPress(VK_F2))
-	{
-		mCurrentCamMode = mFPScam;
-		mCurrentCamAngle = mFPSangle;
-	}
-	if (Input::KeyPress(VK_F3))
-	{
-		mCurrentCamMode = mShoulderCam;
-		mCurrentCamAngle = mShoulderAngle;
-	}
-	if(Input::KeyPress(VK_F4))
-	{
-		mCurrentCamMode = mBackCam;
-		mCurrentCamAngle = mBackAngle;
-	}
-#pragma endregion
 	
-	if(Input::KeyPress(VK_UP))
-	{
-		//DeployEnemy();
-	}
+		if(mClusterArmed)
+		{
+			DisplayClusterAoE();
+		}
 
-	for(unsigned i =0;i<mSpawnLocations.size();i++ )
-	{
-		if(Vector3::Distance(mPlayer.mPos,mSpawnLocations[i])<=50)
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
+		if(mClusterActive == true)
 		{
 			mClusterTimer += Timer::GetDeltaTime();
 
@@ -904,21 +797,23 @@ void MyApp::Update()
 			{
 				for(int i = 0; i < mClusters.size(); i++)
 				{
-					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 12, -50 + (200 * mClusterTimer)));
+					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 5, -30 + (150 * mClusterTimer)));
 				}
 			}
 			else
 			{
 				for(int i = 0; i < mClusters.size(); i++)
 				{
-					float randX = randf(-5, 5);
-					float randY = randf(-10, 0);
+					float randX = randf(-40, 40);
+					float randY = randf(-20, -15);
 					//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
 					//mClusters[i]->LookAt(Vector3(0, 0, randZ));
-					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+					//mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+					mClusters[i]->SetHpr(mClusters[i]->GetHpr().x, 0, 0);
+					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 15));
 				}
 			}
-
+		
 			if(mClusterTimer >= 3.0f)
 			{
 				mClusterActive = false;
@@ -926,7 +821,8 @@ void MyApp::Update()
 			}
 		}
 
-<<<<<<< HEAD
+		CheckEnemyCollisions();
+
 		// Blinking effect when energy is low
 		if(mEnergy <= 20.0f)
 		{
@@ -965,27 +861,15 @@ void MyApp::Update()
 			mCurrentCamAngle = mBackAngle;
 		}
 	#pragma endregion
-=======
-	UpdateAliveNodes(mEnemies);
-	UpdateAliveNodes(mBullets);
-	UpdateAliveNodes(mEnemyBullets);
-	UpdateAliveNodes(mClusters);
-	UpdateAliveNodes(mClusterAoE);
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
 	
 		if(Input::KeyPress(VK_UP))
 		{
-<<<<<<< HEAD
 			//DeployEnemy();
 		}
 
 		for(unsigned i =0;i<mSpawnLocations.size();i++ )
 		{
 			if(Vector3::Distance(mPlayer.mPos,mSpawnLocations[i])<=50)
-=======
-			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z) + 1.2f;
-			/*if(mEnemies[i]->mPos.y>maxHeight)
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
 			{
 				if(mSpawnDelay<1.5f)
 				{
@@ -1002,18 +886,12 @@ void MyApp::Update()
 			}
 		}
 
-		for(unsigned i = 0;i<mEnemies.size();i++)
-		{
-			if(mEnemies[i]->IsAlive())
-			{
-				mEnemies[i]->mPrevPos = mEnemies[i]->mPos;
-			}
-		}
-	
-	
 		UpdateAliveNodes(mEnemies);
 		UpdateAliveNodes(mBullets);
+		UpdateAliveNodes(mEnemyBullets);
 		UpdateAliveNodes(mClusters);
+		UpdateAliveNodes(mClusterAoE);
+
 		for(unsigned i = 0;i<mEnemies.size();i++)
 		{
 			if(mEnemies[i]->IsAlive())
@@ -1062,8 +940,6 @@ void MyApp::Update()
 			}
 		}
 
-	
-
 		//CheckCollisions();
 
 		for(unsigned i = 0;i<mEnemies.size();i++)
@@ -1077,8 +953,10 @@ void MyApp::Update()
 			}
 		}
 
-<<<<<<< HEAD
-		
+		CheckPlayerCollisions();
+
+		Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
+
 		float MOVE_SPEED = 15;
 		float TURN_SPEED = XMConvertToRadians(60);
 		Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
@@ -1086,21 +964,7 @@ void MyApp::Update()
 		turn.y = 0;
 
 		mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
-		mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
-=======
-	CheckPlayerCollisions();
-
-	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
-
-	float MOVE_SPEED = 15;
-	float TURN_SPEED = XMConvertToRadians(60);
-	Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
-	Vector3 turn = GetMouseTurn();
-	turn.y = 0;
-
-	mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
-	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 3;
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
+		mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z) + 3;
 
 		if(move==Vector3(0,0,0))
 		{
@@ -1122,21 +986,12 @@ void MyApp::Update()
 			mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
 
 		mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
-		testStr = ToString("Cluster Timer: ", mClusterTimer);
 
 		mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
 		mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
-
-<<<<<<< HEAD
+		//mCamera.LookAt(Vector3(0,0,3));
+		//mCamera.Update();
 	}
-
-	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
-=======
-	mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
->>>>>>> 898cf91b983d81c8935d4db388f11992b55e4077
-
-	//mCamera.LookAt(Vector3(0,0,3));
-	//mCamera.Update();
 }
 void MyApp::Shutdown()
 {
