@@ -84,7 +84,9 @@ class MyApp:public App
 	void FireShot();
 	void FireEnemyShot(Enemy*);
 	void FireCluster();
-	void CheckCollisions();	
+	void DisplayClusterAoE();
+	void CheckPlayerCollisions(); // Check whether player get shot
+	void CheckEnemyCollisions(); // check whether enemy get shot
 	void DeployEnemy(int);
 	void SetupBarracks();
 	float GetHeight(Vector3);
@@ -97,11 +99,12 @@ class MyApp:public App
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
 	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj;
-	void DrawShadows(const Matrix& view,const Matrix& proj) ;
+	void DrawShadows(const Matrix& view,const Matrix& proj);
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
 	std::vector<Bullet*> mBullets;
-	std::vector<Bullet*> mClusters;
+	std::vector<Bullet*> mEnemyBullets;
+	std::vector<Bullet*> mClusters, mClusterAoE;
 	std::vector<Enemy*> mEnemies;
 	std::vector<DrawableNode*> mBarracks;
 	
@@ -111,7 +114,6 @@ class MyApp:public App
 	Vector3 mTPScam, mFPScam, mShoulderCam, mBackCam;
 	Vector3 mTPSangle, mFPSangle, mShoulderAngle, mBackAngle;
 	
-
 	DrawableNode mPlayer;
 	float maxHeight;
 	
@@ -127,7 +129,7 @@ class MyApp:public App
 	float mSpawnDelay;
 	float mEnergyBlink, mAlphaModifier;
 
-	float mClusterActive, mClusterTimer;
+	float mClusterActive, mClusterTimer, mClusterArmed;
 
 	TerrainMaterial mTerrainMat;
 
@@ -187,7 +189,6 @@ void Enemy::Update()
 	}
 }
 
-
 void MyApp::DeployEnemy(int loc)
 {
 	Enemy* ptr =FindDeadNode(mEnemies);
@@ -233,11 +234,10 @@ void MyApp::FireShot()
 
 void MyApp::FireEnemyShot(Enemy* enemy)
 {
-	Bullet* ptr = FindDeadNode(mBullets);
+	Bullet* ptr = FindDeadNode(mEnemyBullets);
 	if(ptr== nullptr)return;
 	
 	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
-
 
 	//mEnergy--;
 	ptr->mHealth=100;
@@ -264,7 +264,7 @@ void MyApp::FireCluster()
 		//float rot = randf(-40, 40);
 		Bullet* ptr = mClusters[i];
 		ptr->mHealth=100;
-		ptr->mLifetime= 3.0f;
+		ptr->mLifetime= 2.9f;
 		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,3,-0.8f)));
 		//ptr->Yaw(mPlayer.GetHpr().z);
 		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot + i*20));
@@ -273,7 +273,21 @@ void MyApp::FireCluster()
 	}
 	engine->setSoundVolume(mVolume);
 }
-void MyApp::CheckCollisions()
+void MyApp::DisplayClusterAoE()
+{
+	for(int i = 0; i < mClusterAoE.size(); i++)
+	{
+		float rot = 360 / mClusterAoE.size() * i;
+		Bullet* ptr = mClusterAoE[i];
+		ptr->mLifetime = 5.0f;
+		ptr->mHealth = 100;
+		ptr->SetHpr(rot,0,0);
+		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,0,10)) + mClusterAoE[i]->RotateVector(Vector3(0,0,3)));
+		ptr->mPos.y = mpTerrain->GetHeight(mClusterAoE[i]->mPos.x, mClusterAoE[i]->mPos.z) + 0.2f;
+		ptr->mScale = 0.5f;
+	}
+}
+void MyApp::CheckEnemyCollisions()
 {
 	for(int b = 0;b<mBullets.size();b++)
 	{
@@ -281,16 +295,52 @@ void MyApp::CheckCollisions()
 		
 		BoundingSphere bs = mBullets[b]->GetBounds();
 
-		/*for(int t = 0;t <mBoxes.size();t++)
+		for(int t = 0;t < mEnemies.size();t++)
 		{
-			if(mBoxes[t]->IsAlive()==false)continue;
+			if(mEnemies[t]->IsAlive()==false)continue;
 
-			if(bs.Intersects(mBoxes[t]->GetBounds()))
+			if(bs.Intersects(mEnemies[t]->GetBounds()))
 			{
 				mBullets[b]->Kill();
-				mBoxes[t]->mHealth-=25;
+				mEnemies[t]->mHealth-=25;
 			}
-		}*/
+		}
+	}
+
+	if(mClusterActive)
+	{
+		for(int c = 0; c < mClusters.size(); c++)
+		{
+			if(mClusters[c]->IsAlive()==false) continue;
+		
+			BoundingSphere bs = mClusters[c]->GetBounds();
+
+			for(int t = 0;t < mEnemies.size();t++)
+			{
+				if(mEnemies[t]->IsAlive()==false)continue;
+
+				if(bs.Intersects(mEnemies[t]->GetBounds()))
+				{
+					mBullets[c]->Kill();
+					mEnemies[t]->mHealth-=25;
+				}
+			}
+		}
+	}
+}
+void MyApp::CheckPlayerCollisions()
+{
+	for(int b = 0;b<mEnemyBullets.size();b++)
+	{
+		if(mEnemyBullets[b]->IsAlive()==false) continue;
+		
+		BoundingSphere bs = mEnemyBullets[b]->GetBounds();
+
+		if(bs.Intersects(mPlayer.GetBounds()))
+		{
+			mEnemyBullets[b]->Kill();
+			mPlayer.mHealth -= 25;
+		}
 	}
 }
 
@@ -360,6 +410,14 @@ void MyApp::Startup()
 		mBullets.push_back(ptr);
 	}
 
+	for (int i = 0; i < 50; i++)
+	{
+		Bullet* ptr = new Bullet();
+		ptr->Init(&mYellowBallObj);
+		ptr->Kill();
+		mEnemyBullets.push_back(ptr);
+	}
+
 	for(int i = 0;i<8;i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -368,6 +426,13 @@ void MyApp::Startup()
 		mClusters.push_back(ptr);
 	}
 
+	for(int i = 0; i < 12; i++)
+	{
+		Bullet* ptr = new Bullet();
+		ptr->Init(&mYellowBallObj);
+		ptr->Kill();
+		mClusterAoE.push_back(ptr);
+	}
 	
 	mShadowMaterial.mpShaderManager=mpShaderManager.get();
 	mShadowMaterial.mpVS=mpShaderManager->VSDefault();
@@ -435,6 +500,7 @@ void MyApp::Startup()
 	mEnergyBlink = 1.0f;
 
 	mClusterActive = false;
+	mClusterArmed = false;
 	mClusterTimer = 0;
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
@@ -546,13 +612,16 @@ void MyApp::Draw()
 	ID3D11ShaderResourceView* tex[]={mpCubemap};
 	GetContext()->PSSetShaderResources(1,1,tex);	// set as index T1
 	mPlayer.Draw(GetContext(),view,proj);
+	mPlayer.mHealth = 1000;
 	mPlayer.mScale = 0.1f;
 	//DrawShadows(view,proj);
 	// draw sky
 	// Present the backbuffer to the screen
 
 	DrawAliveNodes(mBullets,GetContext(),view,proj);
+	DrawAliveNodes(mEnemyBullets,GetContext(),view,proj);
 	DrawAliveNodes(mClusters,GetContext(),view,proj);
+	DrawAliveNodes(mClusterAoE,GetContext(),view,proj);
 	DrawAliveNodes(mEnemies,GetContext(),view,proj);
 	DrawAliveNodes(mBarracks,GetContext(),view,proj);
 	
@@ -568,15 +637,20 @@ void MyApp::Draw()
 
 	const RECT* rect = &rec;
 
-	if(mClusterActive)
+	if(mClusterArmed)
 	{
-		strCluster=L"Cluster: Recharging";
-		strClusterCD = ToString("Cooldown: ", (int)(4 - mClusterTimer));
+		strCluster=L"Cluster: Armed";
 	}
 	else
 	{
 		strCluster=L"Cluster: Active";
 		strClusterCD=L"";
+	}
+
+	if(mClusterActive)
+	{
+		strCluster=L"Cluster: Recharging";
+		strClusterCD = ToString("Cooldown: ", (int)(4 - mClusterTimer));
 	}
 
 	mpSpriteBatch->Begin();
@@ -654,10 +728,25 @@ void MyApp::Update()
 	}
 	if(Input::KeyPress(VK_LBUTTON))
 	{
-		if (mEnergy>=0)
-		{	
-			mRecoverDelay = 0;
-			FireShot();
+		// Shoot regular bullet
+		if(!mClusterArmed)
+		{
+			if (mEnergy>=0)
+			{	
+				mRecoverDelay = 0;
+				FireShot();
+			}
+		}
+		else
+		{
+			for(int i = 0; i < mClusterAoE.size(); i++)
+			{
+				mClusterAoE[i]->Kill();
+			}
+
+			FireCluster();
+			mClusterActive = true;
+			mClusterArmed = false;
 		}
 	}
 	else
@@ -677,9 +766,21 @@ void MyApp::Update()
 	{
 		if(Input::KeyPress(0x5A))
 		{
-			FireCluster();
-			mClusterActive = true;
+			mClusterArmed = !mClusterArmed;
+
+			if(!mClusterArmed)
+			{
+				for(int i = 0; i < mClusterAoE.size(); i++)
+				{
+					mClusterAoE[i]->Kill();
+				}
+			}
 		}	
+	}
+	
+	if(mClusterArmed)
+	{
+		DisplayClusterAoE();
 	}
 
 	if(mClusterActive == true)
@@ -713,6 +814,8 @@ void MyApp::Update()
 			mClusterTimer = 0;
 		}
 	}
+
+	CheckEnemyCollisions();
 
 	// Blinking effect when energy is low
 	if(mEnergy <= 20.0f)
@@ -777,11 +880,11 @@ void MyApp::Update()
 		}
 	}
 
-	
-
 	UpdateAliveNodes(mEnemies);
 	UpdateAliveNodes(mBullets);
+	UpdateAliveNodes(mEnemyBullets);
 	UpdateAliveNodes(mClusters);
+	UpdateAliveNodes(mClusterAoE);
 	
 	for(unsigned i = 0;i<mEnemies.size();i++)
 	{
@@ -829,6 +932,8 @@ void MyApp::Update()
 			}
 		}
 	}
+
+	CheckPlayerCollisions();
 
 	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
