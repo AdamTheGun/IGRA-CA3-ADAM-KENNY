@@ -155,8 +155,8 @@ void Enemy::Update()
 {
 	if(Vector3::Distance((*mEnemyPos),mPos)>25)
 	{
-		mPrevPos = mPos;
-		if(!mTooNearBool)
+		
+		if(mTooNearBool==false)
 		{
 			mVelocity = (*(mEnemyPos) - GetPos())/3;
 		}
@@ -463,6 +463,7 @@ void MyApp::Draw()
 	const unsigned BLEND_MASK=0xffffffff;
 	GetContext()->OMSetDepthStencilState(mpShadowStencil,0);
 
+	
 	// setup the matrixes
 	Matrix world;
 	Matrix view=mCamera.GetViewMatrix();
@@ -481,6 +482,9 @@ void MyApp::Draw()
 	ShaderManager::SetSampler(GetContext(),
                             mpShaderManager->CommonStates()->LinearWrap());
 	
+	if(mEnergy>0.0f)
+	{
+
 	world= Matrix::CreateTranslation(mCamera.GetPos());
 	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
 	mSkyObj.mMaterial.Apply(GetContext());
@@ -557,6 +561,7 @@ void MyApp::Draw()
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),posx.c_str(),Vector2(199,199), Colors::Black);
 	mpSpriteFont->DrawString(mpSpriteBatch.get(),posz.c_str(),Vector2(200,220), Colors::White);
 	mpSpriteBatch->End();
+	}
 
 	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
 	GetContext()->OMSetDepthStencilState(
@@ -608,229 +613,257 @@ void MyApp::Update()
 	//SetCursorPos(mCentreOfScreen.x, mCentreOfScreen.y);
 
 	if (Input::KeyPress(VK_ESCAPE))
-		CloseWin();
+			CloseWin();
 
-#pragma region Player Shooting Functions & Effects
-	if(mEnergy<=100.0f){
-		if(Input::KeyDown(VK_UP))
-			mEnergy++;
-	}
-	if(mEnergy>=0)
-	{
-		if(Input::KeyDown(VK_DOWN))
-			mEnergy--;
-	}
-	if(Input::KeyPress(VK_LBUTTON))
-	{
-		if (mEnergy>=0)
-		{	
-			mRecoverDelay = 0;
-			FireShot();
+	if(mEnergy>0.0f){
+
+	#pragma region Player Shooting Functions & Effects
+		if(mEnergy<=100.0f){
+			if(Input::KeyDown(VK_UP))
+				mEnergy++;
 		}
-	}
-	else
-	{
-		// Recovery after shooting
-		if(mRecoverDelay <= 1)
+		if(mEnergy>=0)
 		{
-			mRecoverDelay += Timer::GetDeltaTime();
+			if(Input::KeyDown(VK_DOWN))
+				mEnergy--;
 		}
-		else if(mEnergy <= 100.0f)
+		if(Input::KeyPress(VK_LBUTTON))
 		{
-			mEnergy += 4 * Timer::GetDeltaTime();
-		}
-	}
-
-	if(mClusterActive == false)
-	{
-		if(Input::KeyPress(0x5A))
-		{
-			FireCluster();
-			mClusterActive = true;
-		}	
-	}
-
-	if(mClusterActive == true)
-	{
-		mClusterTimer += Timer::GetDeltaTime();
-
-		if(mClusterTimer <= 0.5f)
-		{
-			for(int i = 0; i < mClusters.size(); i++)
-			{
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 12, -50 + (200 * mClusterTimer)));
+			if (mEnergy>=0)
+			{	
+				mRecoverDelay = 0;
+				FireShot();
 			}
 		}
 		else
 		{
-			for(int i = 0; i < mClusters.size(); i++)
+			// Recovery after shooting
+			if(mRecoverDelay <= 1)
 			{
-				float randX = randf(-5, 5);
-				float randY = randf(-10, 0);
-				//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
-				//mClusters[i]->LookAt(Vector3(0, 0, randZ));
-				mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+				mRecoverDelay += Timer::GetDeltaTime();
+			}
+			else if(mEnergy <= 100.0f)
+			{
+				mEnergy += 4 * Timer::GetDeltaTime();
 			}
 		}
 
-		if(mClusterTimer >= 3.0f)
+		if(mClusterActive == false)
 		{
-			mClusterActive = false;
-			mClusterTimer = 0;
-		}
-	}
-
-	// Blinking effect when energy is low
-	if(mEnergy <= 20.0f)
-	{
-		if(mEnergyBlink <= 0)
-			mAlphaModifier = 2 * Timer::GetDeltaTime();
-		else if(mEnergyBlink >= 1)
-			mAlphaModifier = -2 * Timer::GetDeltaTime();
-
-		mEnergyBlink += mAlphaModifier;
-	}
-	else
-	{
-		mEnergyBlink = 1.0f;
-	}
-#pragma endregion
-
-#pragma region Camera Modes Switch
-	if (Input::KeyPress(VK_F1))
-	{
-		mCurrentCamMode = mTPScam;
-		mCurrentCamAngle = mTPSangle;
-	}
-	if (Input::KeyPress(VK_F2))
-	{
-		mCurrentCamMode = mFPScam;
-		mCurrentCamAngle = mFPSangle;
-	}
-	if (Input::KeyPress(VK_F3))
-	{
-		mCurrentCamMode = mShoulderCam;
-		mCurrentCamAngle = mShoulderAngle;
-	}
-	if(Input::KeyPress(VK_F4))
-	{
-		mCurrentCamMode = mBackCam;
-		mCurrentCamAngle = mBackAngle;
-	}
-#pragma endregion
-	
-	if(Input::KeyPress(VK_UP))
-	{
-		//DeployEnemy();
-	}
-
-	for(unsigned i =0;i<mSpawnLocations.size();i++ )
-	{
-		if(Vector3::Distance(mPlayer.mPos,mSpawnLocations[i])<=50)
-		{
-			if(mSpawnDelay<1.5f)
+			if(Input::KeyPress(0x5A))
 			{
-				mSpawnDelay+=Timer::GetDeltaTime();
+				FireCluster();
+				mClusterActive = true;
+			}	
+		}
+
+		if(mClusterActive == true)
+		{
+			mClusterTimer += Timer::GetDeltaTime();
+
+			if(mClusterTimer <= 0.5f)
+			{
+				for(int i = 0; i < mClusters.size(); i++)
+				{
+					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(0, 12, -50 + (200 * mClusterTimer)));
+				}
 			}
 			else
 			{
-				mSpawnDelay = 0.0f;
+				for(int i = 0; i < mClusters.size(); i++)
+				{
+					float randX = randf(-5, 5);
+					float randY = randf(-10, 0);
+					//mClusters[i]->SetHpr(0, XMConvertToRadians(90), 0);
+					//mClusters[i]->LookAt(Vector3(0, 0, randZ));
+					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
+				}
 			}
-			if(mSpawnDelay==0.0f)
+
+			if(mClusterTimer >= 3.0f)
 			{
-				DeployEnemy(i);
+				mClusterActive = false;
+				mClusterTimer = 0;
 			}
 		}
-	}
 
-	
-
-	UpdateAliveNodes(mEnemies);
-	UpdateAliveNodes(mBullets);
-	UpdateAliveNodes(mClusters);
-	
-	for(unsigned i = 0;i<mEnemies.size();i++)
-	{
-		if(mEnemies[i]->IsAlive())
+		// Blinking effect when energy is low
+		if(mEnergy <= 20.0f)
 		{
-			mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
-			/*if(mEnemies[i]->mPos.y>maxHeight)
+			if(mEnergyBlink <= 0)
+				mAlphaModifier = 2 * Timer::GetDeltaTime();
+			else if(mEnergyBlink >= 1)
+				mAlphaModifier = -2 * Timer::GetDeltaTime();
+
+			mEnergyBlink += mAlphaModifier;
+		}
+		else
+		{
+			mEnergyBlink = 1.0f;
+		}
+	#pragma endregion
+
+	#pragma region Camera Modes Switch
+		if (Input::KeyPress(VK_F1))
+		{
+			mCurrentCamMode = mTPScam;
+			mCurrentCamAngle = mTPSangle;
+		}
+		if (Input::KeyPress(VK_F2))
+		{
+			mCurrentCamMode = mFPScam;
+			mCurrentCamAngle = mFPSangle;
+		}
+		if (Input::KeyPress(VK_F3))
+		{
+			mCurrentCamMode = mShoulderCam;
+			mCurrentCamAngle = mShoulderAngle;
+		}
+		if(Input::KeyPress(VK_F4))
+		{
+			mCurrentCamMode = mBackCam;
+			mCurrentCamAngle = mBackAngle;
+		}
+	#pragma endregion
+	
+		if(Input::KeyPress(VK_UP))
+		{
+			//DeployEnemy();
+		}
+
+		for(unsigned i =0;i<mSpawnLocations.size();i++ )
+		{
+			if(Vector3::Distance(mPlayer.mPos,mSpawnLocations[i])<=50)
 			{
-				mEnemies[i]->mPos.y = maxHeight;
-				mEnemies[i]->mPos = mEnemies[i]->mPrevPos;
-			}*/
-			for(unsigned e = 0;e<mEnemies.size();e++)
-			{
-				if(mEnemies[e]->IsAlive())
+				if(mSpawnDelay<1.5f)
 				{
-					if(mEnemies[i]!=mEnemies[e])
+					mSpawnDelay+=Timer::GetDeltaTime();
+				}
+				else
+				{
+					mSpawnDelay = 0.0f;
+				}
+				if(mSpawnDelay==0.0f)
+				{
+					DeployEnemy(i);
+				}
+			}
+		}
+
+		for(unsigned i = 0;i<mEnemies.size();i++)
+		{
+			if(mEnemies[i]->IsAlive())
+			{
+				mEnemies[i]->mPrevPos = mEnemies[i]->mPos;
+			}
+		}
+	
+	
+		UpdateAliveNodes(mEnemies);
+		UpdateAliveNodes(mBullets);
+		UpdateAliveNodes(mClusters);
+		for(unsigned i = 0;i<mEnemies.size();i++)
+		{
+			if(mEnemies[i]->IsAlive())
+			{
+				mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
+				/*if(mEnemies[i]->mPos.y>maxHeight)
+				{
+					mEnemies[i]->mPos.y = maxHeight;
+					mEnemies[i]->mPos = mEnemies[i]->mPrevPos;
+				}*/
+
+				bool collide = false;
+
+				for(unsigned e = 0;e<mEnemies.size();e++)
+				{
+					if(mEnemies[e]->IsAlive())
 					{
-						if(Vector3::Distance(mEnemies[i]->mPos,mEnemies[e]->mPos)>10)
+						if(mEnemies[i]!=mEnemies[e])
+						{
+							BoundingSphere bs = mEnemies[i]->GetBounds();
+							if(bs.Intersects(mEnemies[e]->GetBounds()))
+							{
+								collide = true;
+							}
+						}
+					
+						if(collide)
+						{
+							mEnemies[i]->mVelocity = -(mEnemies[e]->mPos - mEnemies[i]->mPos);
+							mEnemies[e]->mVelocity = -(mEnemies[i]->mPos - mEnemies[e]->mPos);
+						
+							mEnemies[i]->mPos += mEnemies[i]->mVelocity*Timer::GetDeltaTime();
+							//mEnemies[e]->mPos += mEnemies[e]->mVelocity*Timer::GetDeltaTime();
+							mEnemies[i]->mTooNearBool = true;
+							mEnemies[e]->mTooNearBool = true;
+						
+							//mEnemies[i]->mPos = mEnemies[i]->mPrevPos;
+						}
+						else
 						{
 							mEnemies[i]->mTooNearBool = false;
 							mEnemies[e]->mTooNearBool = false;
-						}
-						if(Vector3::Distance(mEnemies[i]->mPos,mEnemies[e]->mPos)<10)
-						{
-							mEnemies[i]->mTooNearBool = true;
-							mEnemies[e]->mTooNearBool = true;
-							mEnemies[i]->mVelocity = -(mEnemies[e]->mPos-mEnemies[i]->mPos);
-							mEnemies[e]->mVelocity = -(mEnemies[i]->mPos-mEnemies[e]->mPos);
 						}
 					}
 				}
 			}
 		}
-	}
 
-	//CheckCollisions();
+	
 
-	for(unsigned i = 0;i<mEnemies.size();i++)
-	{
-		if(mEnemies[i]->attackBool)
+		//CheckCollisions();
+
+		for(unsigned i = 0;i<mEnemies.size();i++)
 		{
-			if(mEnemies[i]->shotTimer==0.0f)
+			if(mEnemies[i]->attackBool)
 			{
-				FireEnemyShot(mEnemies[i]);
+				if(mEnemies[i]->shotTimer==0.0f)
+				{
+					FireEnemyShot(mEnemies[i]);
+				}
 			}
 		}
+
+		
+		float MOVE_SPEED = 15;
+		float TURN_SPEED = XMConvertToRadians(60);
+		Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
+		Vector3 turn = GetMouseTurn();
+		turn.y = 0;
+
+		mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
+		mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
+
+		if(move==Vector3(0,0,0))
+		{
+			if(mVolume>0.1f)
+			{
+				mVolume -= 0.2f*Timer::GetDeltaTime();
+			}
+		}
+		else
+		{
+			if(mVolume<=0.8f)
+			{
+				mVolume += 0.1f*Timer::GetDeltaTime();
+			}
+		}
+		engine->setSoundVolume(mVolume);
+
+		if(mPlayer.mPos.y > maxHeight)
+			mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
+
+		mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
+		testStr = ToString("Cluster Timer: ", mClusterTimer);
+
+		mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
+		mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
+
 	}
 
 	Input::SetMousePos(mCentreOfScreen.x, mCentreOfScreen.y, GetWindow());
 
-	float MOVE_SPEED = 15;
-	float TURN_SPEED = XMConvertToRadians(60);
-	Vector3 move = GetKeyboardMovement(KBMOVE_WSAD);
-	Vector3 turn = GetMouseTurn();
-	turn.y = 0;
-
-	mPlayer.Move(move*MOVE_SPEED*Timer::GetDeltaTime());
-	mPlayer.mPos.y = mpTerrain->GetHeight(mPlayer.mPos.x, mPlayer.mPos.z);
-
-	if(move==Vector3(0,0,0))
-	{
-		if(mVolume>0.1f)
-		{
-			mVolume -= 0.2f*Timer::GetDeltaTime();
-		}
-	}
-	else
-	{
-		if(mVolume<=0.8f)
-		{
-			mVolume += 0.1f*Timer::GetDeltaTime();
-		}
-	}
-	engine->setSoundVolume(mVolume);
-
-	if(mPlayer.mPos.y > maxHeight)
-		mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
-
-	mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
-	testStr = ToString("Cluster Timer: ", mClusterTimer);
-
-	mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
-	mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
 	//mCamera.LookAt(Vector3(0,0,3));
 	//mCamera.Update();
 }
@@ -838,7 +871,9 @@ void MyApp::Shutdown()
 {
 	DeleteAllNodes(mBullets);
 	DeleteAllNodes(mEnemies);
+	DeleteAllNodes(mClusters);
 	engine->drop();
+	sfxEngine->drop();
 }
 
 // in console C++ is was main()
@@ -848,6 +883,7 @@ int WINAPI WinMain(HINSTANCE hInstance,	//Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
+	ENABLE_LEAK_DETECTION();
 	MyApp app;
 	return app.Go(hInstance);	// go!
 }
