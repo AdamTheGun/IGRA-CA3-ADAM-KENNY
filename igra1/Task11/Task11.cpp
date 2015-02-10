@@ -89,6 +89,7 @@ class MyApp:public App
 	void CheckEnemyCollisions(); // check whether enemy get shot
 	void DeployEnemy(int);
 	void SetupBarracks();
+	void Restart();
 	float GetHeight(Vector3);
 
 	Vector2 mCentreOfScreen;
@@ -135,7 +136,7 @@ class MyApp:public App
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont,mpSpriteFont16;
- 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar;
+ 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen;
 
 	std::vector<Vector3> mSpawnLocations;
 
@@ -339,7 +340,10 @@ void MyApp::CheckPlayerCollisions()
 		if(bs.Intersects(mPlayer.GetBounds()))
 		{
 			mEnemyBullets[b]->Kill();
-			mPlayer.mHealth -= 25;
+			mRecoverDelay = 0;
+			sfxEngine->play2D("../Content/Sounds/Body_Hit_11.wav",false);
+			mEnergy -= 5;
+			//mPlayer.mHealth -= 25;
 		}
 	}
 }
@@ -507,6 +511,7 @@ void MyApp::Startup()
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
 	mpSpriteFont16.reset(new SpriteFont(GetDevice(),L"../Content/Times16.sprfont"));
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
+	mpGameOverScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Game-Over.jpg");
 
 	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
@@ -667,6 +672,21 @@ void MyApp::Draw()
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(50, 80),Colors::Black);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(51, 81),Colors::White);
 	mpSpriteBatch->End();
+	}
+	else
+	{
+		RECT rec;
+		rec.left = 0;
+		rec.top = 0;
+		rec.bottom = 768;
+		rec.right = 1024;
+
+		const RECT* rec1 = &rec;
+
+		mpSpriteBatch->Begin();
+		mpSpriteBatch->Draw(mpGameOverScreen,XMFLOAT2(0,0),rec1,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		mpSpriteBatch->End();
+
 	}
 
 	GetContext()->OMSetBlendState(mpShaderManager.get()->CommonStates()->Opaque(),BLEND_FACTOR,BLEND_MASK);
@@ -992,12 +1012,61 @@ void MyApp::Update()
 		//mCamera.LookAt(Vector3(0,0,3));
 		//mCamera.Update();
 	}
+	else
+	{
+		if(Input::KeyPress(VK_ESCAPE))
+		{
+			
+		
+		}
+		if(Input::KeyPress(VK_LBUTTON))
+		{
+			Restart();
+		}
+	}
 }
+
+void MyApp::Restart()
+{
+	mEnergy = 100.0f;
+	for(unsigned i =0;i<mBullets.size();i++)
+	{
+		mBullets[i]->Kill();
+	}
+	for(unsigned i =0;i<mEnemies.size();i++)
+	{
+
+		mEnemies[i]->Kill();
+	}
+	for(unsigned i =0;i<mClusters.size();i++)
+	{
+		mClusters[i]->Kill();
+	}
+	for(unsigned i =0;i<mEnemyBullets.size();i++)
+	{
+		mEnemyBullets[i]->Kill();
+	}
+	for(unsigned i =0;i<mClusterAoE.size();i++)
+	{
+		mClusterAoE[i]->Kill();
+	}
+	for(unsigned i =0;i<mBarracks.size();i++)
+	{
+		//mBarracks[i]->Kill();
+		mBarracks[i]->mHealth = 100.0f;
+	}
+	mPlayer.SetPos(Vector3(-80,0,-100));
+
+}
+
 void MyApp::Shutdown()
 {
 	DeleteAllNodes(mBullets);
 	DeleteAllNodes(mEnemies);
 	DeleteAllNodes(mClusters);
+	DeleteAllNodes(mEnemyBullets);
+	DeleteAllNodes(mClusterAoE);
+	DeleteAllNodes(mBarracks);
 	engine->drop();
 	sfxEngine->drop();
 }
@@ -1009,9 +1078,15 @@ int WINAPI WinMain(HINSTANCE hInstance,	//Main windows function
 	LPSTR lpCmdLine,
 	int nShowCmd)
 {
+	/*bool stopbool =false;
+	int goInt = 0;
+	do
+	{*/
 	ENABLE_LEAK_DETECTION();
 	MyApp app;
 	return app.Go(hInstance);	// go!
+	/*}while(!stopbool);
+	return goInt;*/
 }
 
 
