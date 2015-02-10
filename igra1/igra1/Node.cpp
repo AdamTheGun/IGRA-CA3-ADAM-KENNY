@@ -100,6 +100,12 @@ DirectX::BoundingSphere DrawableNode::GetBounds(float scaleby)
 	return DirectX::BoundingSphere(mPos,radius*mScale*scaleby);
 }
 
+DirectX::BoundingBox DrawableNode::GetBox()
+{
+	Vector3 size = Vector3(mpModel->GetBBox().Extents.x, mpModel->GetBBox().Extents.y, mpModel->GetBBox().Extents.z);
+	return DirectX::BoundingBox(mPos, size * mScale * 0.65f);
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CameraNode::CameraNode(const Vector3& pos,const Vector3& turn,

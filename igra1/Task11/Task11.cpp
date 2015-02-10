@@ -138,7 +138,8 @@ class MyApp:public App
 	TerrainMaterial mTerrainMat;
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
-	std::unique_ptr<SpriteFont> mpSpriteFont,mpSpriteFont16;
+
+	std::unique_ptr<SpriteFont> mpSpriteFont,mpVikingFont72;
  	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText,mpEsc2Quit;
 
 	std::vector<Vector3> mSpawnLocations;
@@ -147,6 +148,8 @@ class MyApp:public App
 
 	public :
 		std::unique_ptr<Terrain> mpTerrain;
+
+		float mDiagnostics;
 };
 
 void Bullet::Update()
@@ -298,13 +301,13 @@ void MyApp::CheckEnemyCollisions()
 	{
 		if(mBullets[b]->IsAlive()==false) continue;
 		
-		BoundingSphere bs = mBullets[b]->GetBounds();
+		BoundingBox bb = mBullets[b]->GetBox();
 
 		for(int t = 0;t < mEnemies.size();t++)
 		{
 			if(mEnemies[t]->IsAlive()==false)continue;
 
-			if(bs.Intersects(mEnemies[t]->GetBounds()))
+			if(bb.Intersects(mEnemies[t]->GetBox()))
 			{
 				mBullets[b]->Kill();
 				mEnemies[t]->mHealth-=25;
@@ -324,18 +327,20 @@ void MyApp::CheckEnemyCollisions()
 		{
 			if(mClusters[c]->IsAlive()==false) continue;
 		
-			BoundingSphere bs = mClusters[c]->GetBounds();
+			BoundingBox bb = mClusters[c]->GetBox();
 
 			for(int t = 0;t < mEnemies.size();t++)
 			{
 				if(mEnemies[t]->IsAlive()==false)continue;
 
-				if(bs.Intersects(mEnemies[t]->GetBounds()))
+				if(bb.Intersects(mEnemies[t]->GetBox()))
 				{
 					mBullets[c]->Kill();
 					mEnemies[t]->mHealth-=25;
 
-					mScore += 10;
+					// prevent player from overscoring
+					if(mEnemies[t]->mHealth >= 0)
+						mScore += 10;
 				}
 			}
 		}
@@ -347,9 +352,9 @@ void MyApp::CheckPlayerCollisions()
 	{
 		if(mEnemyBullets[b]->IsAlive()==false) continue;
 		
-		BoundingSphere bs = mEnemyBullets[b]->GetBounds();
+		BoundingBox bb = mEnemyBullets[b]->GetBox();
 
-		if(bs.Intersects(mPlayer.GetBounds()))
+		if(bb.Intersects(mPlayer.GetBox()))
 		{
 			mEnemyBullets[b]->Kill();
 			mRecoverDelay = 0;
@@ -367,6 +372,8 @@ void MyApp::Startup()
 
 	ShowCursor(false);
 	mCentreOfScreen = Vector2(GetWindowRect().right / 2,GetWindowRect().bottom / 2);
+	
+	mpDraw3D.reset(new PrimitiveBatch<ColouredVertex>(GetContext()));
 
 	// just create the Shader Manager
 	mpShaderManager.reset(new ShaderManager(GetDevice()));
@@ -522,9 +529,12 @@ void MyApp::Startup()
 	mClusterArmed = false;
 	mClusterTimer = 0;
 
+	mDiagnostics = false;
+
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
-	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
-	mpSpriteFont16.reset(new SpriteFont(GetDevice(),L"../Content/Times16.sprfont"));
+
+	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Viking20.sprfont"));
+	mpVikingFont72.reset(new SpriteFont(GetDevice(),L"../Content/Viking72.sprfont"));
 
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 	mpGameOverScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Game-Over.jpg");
@@ -651,6 +661,16 @@ void MyApp::Draw()
 	DrawAliveNodes(mEnemies,GetContext(),view,proj);
 	DrawAliveNodes(mBarracks,GetContext(),view,proj);
 	
+	if(mDiagnostics)
+	{
+		Draw3DPrepare(GetContext(),mpShaderManager.get(),view,proj);
+		mpDraw3D->Begin();
+		//DrawAliveNodeBounds(mBullets,mpDraw3D.get(),Colors::Green);
+		DrawAliveNodeBounds(mEnemies,mpDraw3D.get(),Colors::Red);
+		Draw3DBoundingBox(mpDraw3D.get(),mPlayer.GetBox(),Colors::White);
+		mpDraw3D->End();
+	}
+
 	GetContext()->OMSetDepthStencilState(
                             mpShaderManager->CommonStates()->DepthDefault(),0);
 	//XMMATRIX matrix = XMMATRIX(mEnergy/10,0,0,0,0,1,0,0,0,0,1,0,-1,1,0,1);
@@ -682,12 +702,12 @@ void MyApp::Draw()
 	mpSpriteBatch->Begin();
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 	std::wstring scoreStr = ToString("Score: ", mScore);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(50, 60),Colors::Black);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(51, 61),Colors::White);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(50, 80),Colors::Black);
-	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(51, 81),Colors::White);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 260, 35),Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 261, 37),Colors::White);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(40, 60),Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(41, 62),Colors::White);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(40, 80),Colors::Black);
+	mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(41, 82),Colors::White);
 	mpSpriteBatch->End();
 	}
 	else
@@ -698,6 +718,8 @@ void MyApp::Draw()
 		rec.bottom = 768;
 		rec.right = 1024;
 
+		std::wstring mFinalScore = ToString("Final Score: ", mScore);
+
 		const RECT* rec1 = &rec;
 
 		mpSpriteBatch->Begin();
@@ -707,7 +729,6 @@ void MyApp::Draw()
 		rec.right = 700;
 
 		const RECT* rec2 = &rec;
-
 		float flash=((sinf(Timer::GetTime()*2)+1)/2)+0.4f;
 
 		mpSpriteBatch->Draw(mpGameOverText,XMFLOAT2(mSize.right/2,(mSize.bottom/3)*2-50),rec2,DirectX::Colors::White*flash,0.0f,XMFLOAT2(350,35),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
@@ -716,6 +737,10 @@ void MyApp::Draw()
 		rec.bottom = 70;
 
 		mpSpriteBatch->Draw(mpEsc2Quit,XMFLOAT2(mSize.right/2,(mSize.bottom/3)*2+20),rec2,DirectX::Colors::White,0.0f,XMFLOAT2(200,35),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		
+		mpVikingFont72->DrawString(mpSpriteBatch.get(),mFinalScore.c_str(),Vector2(180,320),Colors::White);
+		mpVikingFont72->DrawString(mpSpriteBatch.get(),mFinalScore.c_str(),Vector2(181,322),Colors::Red);
+
 		mpSpriteBatch->End();
 
 		mTextBlinker = ((sin(mTextBlinker)+1)/2);
@@ -799,7 +824,10 @@ void MyApp::Update()
 	//SetCursorPos(mCentreOfScreen.x, mCentreOfScreen.y);
 
 	if (Input::KeyPress(VK_ESCAPE))
-			CloseWin();
+		CloseWin();
+
+	if(Input::KeyPress(VK_TAB))
+		mDiagnostics = !mDiagnostics;
 
 	if(mEnergy>0.0f){
 	#pragma region Player Shooting Functions & Effects

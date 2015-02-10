@@ -214,6 +214,8 @@ public:
 	This is based on the node's location, scale and the models scale.
 	As this is usually a little large the scaleby factor is added to reduce the size */
 	DirectX::BoundingSphere GetBounds(float scaleby=0.75f);
+	
+	DirectX::BoundingBox GetBox();
 };
 //////////////////////////////////////////////////////////////////////////
 
@@ -362,7 +364,10 @@ void DrawAliveNodeBounds(const std::vector<T*>& nodes,DirectX::PrimitiveBatch<Co
 	for(unsigned i=0;i<nodes.size();++i)
 	{
 		if (nodes[i]->IsAlive())
-			Draw3DBoundingSphere(pBatch,nodes[i]->GetBounds(),color);		
+		{
+			Draw3DBoundingBox(pBatch,nodes[i]->GetBox(),color);	
+			//Draw3DBoundingSphere(pBatch,nodes[i]->GetBounds(),color);		
+		}
 	}
 }
 

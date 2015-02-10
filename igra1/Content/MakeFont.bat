@@ -1,3 +1,3 @@
-MakeSpriteFont "Times New Roman" /FontSize:16 Times16.sprfont
+MakeSpriteFont "Viking Squad Bold" /FontSize:72 Viking72.sprfont
 
 pause
