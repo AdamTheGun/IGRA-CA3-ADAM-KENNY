@@ -89,6 +89,7 @@ class MyApp:public App
 	void CheckEnemyCollisions(); // check whether enemy get shot
 	void DeployEnemy(int);
 	void SetupBarracks();
+	void SetupTrees();
 	void Restart();
 	float GetHeight(Vector3);
 
@@ -99,7 +100,7 @@ class MyApp:public App
 	std::unique_ptr<PrimitiveBatch<ColouredVertex>> mpDraw3D;
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
-	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj;
+	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj, mTreeObj;
 	void DrawShadows(const Matrix& view,const Matrix& proj);
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
@@ -107,7 +108,7 @@ class MyApp:public App
 	std::vector<Bullet*> mEnemyBullets;
 	std::vector<Bullet*> mClusters, mClusterAoE;
 	std::vector<Enemy*> mEnemies;
-	std::vector<DrawableNode*> mBarracks;
+	std::vector<DrawableNode*> mBarracks, mTrees;
 	
 	//ArcBallCamera mCamera;
 	CameraNode mCamera;
@@ -151,219 +152,6 @@ class MyApp:public App
 
 		float mDiagnostics;
 };
-
-void Bullet::Update()
-{
-	mLifetime-= Timer::GetDeltaTime();
-	mPos+=mVelocity*Timer::GetDeltaTime();
-	if(mLifetime<0)
-	{
-		Kill();//Kills self
-	}
-}
-
-void Enemy::Update()
-{
-	if(Vector3::Distance((*mEnemyPos),mPos)>25)
-	{
-		
-		if(mTooNearBool==false)
-		{
-			mVelocity = (*(mEnemyPos) - GetPos())/3;
-		}
-		//Move(-(mVelocity*Timer::GetDeltaTime()));
-		mPos+=mVelocity*Timer::GetDeltaTime();
-		attackBool = false;
-		//mPos.y = MyApp::GetHeight(mPos);
-	}
-	else 
-	{
-		attackBool = true;
-	}
-	
-	LookAt(*(mEnemyPos));
-	if(mHealth<0)
-	{
-		Kill();
-	}
-	if(attackBool == true)
-	{
-		shotTimer+=Timer::GetDeltaTime();
-	}
-	if(shotTimer>1.5f)
-	{
-		shotTimer = 0.0f;
-	}
-}
-
-void MyApp::DeployEnemy(int loc)
-{
-	Enemy* ptr =FindDeadNode(mEnemies);
-	if(ptr == nullptr)return;
-
-	ptr->attackBool = false;
-	ptr->mHealth = 100.0f;
-	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
-	//int i = rand() % (int)(4 - 0 + 1);
-	//ptr->mPos = mSpawnLocations[i];
-	ptr->mScale = 0.02f;
-	ptr->SetPos(mSpawnLocations[loc] + Vector3(4,0,0));
-	ptr->shotTimer = 0.0f;
-	ptr->mEnemyPos = &mPlayer.mPos;
-	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
-	ptr->mTooNearBool = false;
-}
-void MyApp::SetupBarracks()
-{
-	for(int i = 0; i < mSpawnLocations.size(); i++)
-	{
-		DrawableNode* ptr = FindDeadNode(mBarracks);
-		if(ptr == nullptr)return;
-
-		ptr->mHealth = 500.0f;
-		ptr->mScale = 0.18f;
-		ptr->SetPos(mSpawnLocations[i] + Vector3(0,1.96f,0));
-	}
-}
-
-void MyApp::FireShot()
-{
-	Bullet* ptr = FindDeadNode(mBullets);
-	if(ptr== nullptr)return;
-	
-	mEnergy--;
-	ptr->mHealth=100;
-	ptr->mLifetime= 3.0f;
-	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-1,1.2f,1)));
-	ptr->mVelocity = mPlayer.RotateVector(Vector3(2.5f,-3.6f,20));
-	ptr->mScale=0.4f;
-}
-
-void MyApp::FireEnemyShot(Enemy* enemy)
-{
-	Bullet* ptr = FindDeadNode(mEnemyBullets);
-	if(ptr== nullptr)return;
-	sfxEngine->setSoundVolume(0.2f);
-	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
-
-	//mEnergy--;
-	ptr->mHealth=100;
-	ptr->mLifetime= 3.0f;
-	ptr->SetPos(enemy->mPos);
-	ptr->mPos.y+=1;
-	ptr->mVelocity =  mPlayer.mPos - enemy->mPos;
-	ptr->mScale=0.4f;
-}
-
-void MyApp::FireCluster()
-{
-	/*
-	Bullet* ptr = FindDeadNode(mBullets);
-	if(ptr== nullptr)return;
-	*/
-
-	//float rot = 40;
-	ISound* clustershot = sfxEngine->play2D("../Content/Sounds/Shotgun.mp3",false);
-	ISound* missleLaunch = sfxEngine->play2D("../Content/Sounds/Missile-Launch.mp3",false);
-	float rot = -70;
-	for(int i = 0; i < mClusters.size(); i++)
-	{
-		//float rot = randf(-40, 40);
-		Bullet* ptr = mClusters[i];
-		ptr->mHealth=100;
-		ptr->mLifetime= 2.9f;
-		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,3,-0.8f)));
-		//ptr->Yaw(mPlayer.GetHpr().z);
-		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot + i*20));
-		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
-		ptr->mScale=0.6f;
-	}
-	mEnergy-=10;
-	engine->setSoundVolume(mVolume);
-}
-void MyApp::DisplayClusterAoE()
-{
-	for(int i = 0; i < mClusterAoE.size(); i++)
-	{
-		float rot = 360 / mClusterAoE.size() * i;
-		Bullet* ptr = mClusterAoE[i];
-		ptr->mLifetime = 5.0f;
-		ptr->mHealth = 100;
-		ptr->SetHpr(rot,0,0);
-		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,0,10)) + mClusterAoE[i]->RotateVector(Vector3(0,0,3)));
-		ptr->mPos.y = mpTerrain->GetHeight(mClusterAoE[i]->mPos.x, mClusterAoE[i]->mPos.z) + 0.2f;
-		ptr->mScale = 0.5f;
-	}
-}
-void MyApp::CheckEnemyCollisions()
-{
-	for(int b = 0;b<mBullets.size();b++)
-	{
-		if(mBullets[b]->IsAlive()==false) continue;
-		
-		BoundingBox bb = mBullets[b]->GetBox();
-
-		for(int t = 0;t < mEnemies.size();t++)
-		{
-			if(mEnemies[t]->IsAlive()==false)continue;
-
-			if(bb.Intersects(mEnemies[t]->GetBox()))
-			{
-				mBullets[b]->Kill();
-				mEnemies[t]->mHealth-=25;
-				mScore += 10;
-
-				if(mEnemies[t]->mHealth <= 0)
-				{
-					mScore += 20;
-				}
-			}
-		}
-	}
-
-	if(mClusterActive)
-	{
-		for(int c = 0; c < mClusters.size(); c++)
-		{
-			if(mClusters[c]->IsAlive()==false) continue;
-		
-			BoundingBox bb = mClusters[c]->GetBox();
-
-			for(int t = 0;t < mEnemies.size();t++)
-			{
-				if(mEnemies[t]->IsAlive()==false)continue;
-
-				if(bb.Intersects(mEnemies[t]->GetBox()))
-				{
-					mBullets[c]->Kill();
-					mEnemies[t]->mHealth-=25;
-
-					// prevent player from overscoring
-					if(mEnemies[t]->mHealth >= 0)
-						mScore += 10;
-				}
-			}
-		}
-	}
-}
-void MyApp::CheckPlayerCollisions()
-{
-	for(int b = 0;b<mEnemyBullets.size();b++)
-	{
-		if(mEnemyBullets[b]->IsAlive()==false) continue;
-		
-		BoundingBox bb = mEnemyBullets[b]->GetBox();
-
-		if(bb.Intersects(mPlayer.GetBox()))
-		{
-			mEnemyBullets[b]->Kill();
-			mRecoverDelay = 0;
-			sfxEngine->play2D("../Content/Sounds/Body_Hit_11.wav",false);
-			mEnergy -= 5;
-			//mPlayer.mHealth -= 25;
-		}
-	}
-}
 
 void MyApp::Startup()
 {
@@ -418,6 +206,7 @@ void MyApp::Startup()
                                L"../Content/skyball.obj",false);
 	mYellowBallObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/yellow_ball.obj");
 	mEnemyObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Cube-Soldier.obj");
+	mTreeObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Cartoon_Pine_Tree.obj");
 	mpCubemap.Attach(CreateTextureResourceDDS(GetDevice(),
                                L"../Content/Cubemaps/grasscube1024.dds"));
 	
@@ -426,7 +215,9 @@ void MyApp::Startup()
 	mSkyObj.mMaterial.mpPS=mpShaderManager->PSSkybox();
 	mSkyObj.mMaterial.mpTexture=mpCubemap;
 	mSkyObj.mMaterial.mMaterial.gUseTexture=true;
-
+	
+#pragma region Vectors
+	// Player's bullets
 	for(int i = 0;i<20;i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -435,6 +226,7 @@ void MyApp::Startup()
 		mBullets.push_back(ptr);
 	}
 
+	// Enemies' bullets
 	for (int i = 0; i < 50; i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -443,6 +235,7 @@ void MyApp::Startup()
 		mEnemyBullets.push_back(ptr);
 	}
 
+	// Cluster "Missile"
 	for(int i = 0;i<8;i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -451,6 +244,7 @@ void MyApp::Startup()
 		mClusters.push_back(ptr);
 	}
 
+	// Cluster AoE Circle
 	for(int i = 0; i < 12; i++)
 	{
 		Bullet* ptr = new Bullet();
@@ -458,6 +252,16 @@ void MyApp::Startup()
 		ptr->Kill();
 		mClusterAoE.push_back(ptr);
 	}
+
+	// Tree
+	for(int i = 0; i < 30; i++)
+	{
+		DrawableNode* ptr = new DrawableNode();
+		ptr->Init(&mTreeObj);
+		ptr->Kill();
+		mTrees.push_back(ptr);
+	}
+#pragma endregion
 	
 	mShadowMaterial.mpShaderManager=mpShaderManager.get();
 	mShadowMaterial.mpVS=mpShaderManager->VSDefault();
@@ -564,6 +368,7 @@ void MyApp::Startup()
 	mCurrentCamAngle = mTPSangle;
 
 	SetupBarracks();
+	SetupTrees();
 }
 void MyApp::Draw()
 {
@@ -660,6 +465,7 @@ void MyApp::Draw()
 	DrawAliveNodes(mClusterAoE,GetContext(),view,proj);
 	DrawAliveNodes(mEnemies,GetContext(),view,proj);
 	DrawAliveNodes(mBarracks,GetContext(),view,proj);
+	DrawAliveNodes(mTrees,GetContext(),view,proj);
 	
 	if(mDiagnostics)
 	{
@@ -667,6 +473,7 @@ void MyApp::Draw()
 		mpDraw3D->Begin();
 		//DrawAliveNodeBounds(mBullets,mpDraw3D.get(),Colors::Green);
 		DrawAliveNodeBounds(mEnemies,mpDraw3D.get(),Colors::Red);
+		DrawAliveNodeBounds(mTrees,mpDraw3D.get(),Colors::Yellow);
 		Draw3DBoundingBox(mpDraw3D.get(),mPlayer.GetBox(),Colors::White);
 		mpDraw3D->End();
 	}
@@ -782,6 +589,7 @@ void MyApp::Draw()
 	GetSwapChain()->Present(0, 0);
 
 }
+
 void MyApp::DrawShadows(const Matrix& view,const Matrix& proj)
 {
 	//Matrix world;
@@ -1153,12 +961,264 @@ void MyApp::Restart()
 	{
 		mBarracks[i]->Kill();
 	}
+	for(unsigned i =0;i<mTrees.size();i++)
+	{
+		mTrees[i]->Kill();
+	}
 	SetupBarracks();
+	SetupTrees();
 	mPlayer.SetPos(Vector3(-80,0,-100));
 	ISound* music = engine->play2D("../Content/Sounds/Tank.mp3",true);
 	mVolume = 0.1f;
 	engine->setSoundVolume(mVolume);
 }
+
+#pragma region Methods
+void Bullet::Update()
+{
+	mLifetime-= Timer::GetDeltaTime();
+	mPos+=mVelocity*Timer::GetDeltaTime();
+	if(mLifetime<0)
+	{
+		Kill();//Kills self
+	}
+}
+
+void Enemy::Update()
+{
+	if(Vector3::Distance((*mEnemyPos),mPos)>25)
+	{
+		
+		if(mTooNearBool==false)
+		{
+			mVelocity = (*(mEnemyPos) - GetPos())/3;
+		}
+		//Move(-(mVelocity*Timer::GetDeltaTime()));
+		mPos+=mVelocity*Timer::GetDeltaTime();
+		attackBool = false;
+		//mPos.y = MyApp::GetHeight(mPos);
+	}
+	else 
+	{
+		attackBool = true;
+	}
+	
+	LookAt(*(mEnemyPos));
+	if(mHealth<0)
+	{
+		Kill();
+	}
+	if(attackBool == true)
+	{
+		shotTimer+=Timer::GetDeltaTime();
+	}
+	if(shotTimer>1.5f)
+	{
+		shotTimer = 0.0f;
+	}
+}
+
+void MyApp::DeployEnemy(int loc)
+{
+	Enemy* ptr =FindDeadNode(mEnemies);
+	if(ptr == nullptr)return;
+
+	ptr->attackBool = false;
+	ptr->mHealth = 100.0f;
+	ptr->mVelocity = mPlayer.GetPos() - ptr->mPos;
+	//int i = rand() % (int)(4 - 0 + 1);
+	//ptr->mPos = mSpawnLocations[i];
+	ptr->mScale = 0.02f;
+	ptr->SetPos(mSpawnLocations[loc] + Vector3(4,0,0));
+	ptr->shotTimer = 0.0f;
+	ptr->mEnemyPos = &mPlayer.mPos;
+	ptr->mVelocity = (*(ptr->mEnemyPos) - ptr->GetPos())/3;
+	ptr->mTooNearBool = false;
+}
+void MyApp::SetupBarracks()
+{
+	for(int i = 0; i < mSpawnLocations.size(); i++)
+	{
+		DrawableNode* ptr = FindDeadNode(mBarracks);
+		if(ptr == nullptr)return;
+
+		ptr->mHealth = 500.0f;
+		ptr->mScale = 0.18f;
+		ptr->SetPos(mSpawnLocations[i] + Vector3(0,1.96f,0));
+	}
+}
+void MyApp::SetupTrees()
+{
+	bool placable = false;
+
+	for(int i = 0; i < mTrees.size(); i++)
+	{
+		DrawableNode* ptr = FindDeadNode(mTrees);
+		if(ptr == nullptr)return;
+
+		float randX = 0;
+		float randZ = 0;
+		float loc = 0;
+
+		while(!placable)
+		{
+			randX = randf(-1000, 1000);
+			randZ = randf(-1000, 1000);
+			loc = mpTerrain->GetHeight(randX, randZ);
+
+			if (loc != 0 && loc < maxHeight - 5)
+			{
+				placable = true;
+			}
+		}
+
+		ptr->mHealth = 100.0f;
+		ptr->mScale = 0.02f;
+		ptr->SetPos(Vector3(randX,loc + 2,randZ));
+
+		placable = false;
+	}
+}
+
+void MyApp::FireShot()
+{
+	Bullet* ptr = FindDeadNode(mBullets);
+	if(ptr== nullptr)return;
+	
+	mEnergy--;
+	ptr->mHealth=100;
+	ptr->mLifetime= 3.0f;
+	ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(-1,1.2f,1)));
+	ptr->mVelocity = mPlayer.RotateVector(Vector3(2.5f,-3.6f,20));
+	ptr->mScale=0.4f;
+}
+
+void MyApp::FireEnemyShot(Enemy* enemy)
+{
+	Bullet* ptr = FindDeadNode(mEnemyBullets);
+	if(ptr== nullptr)return;
+	sfxEngine->setSoundVolume(0.2f);
+	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
+
+	//mEnergy--;
+	ptr->mHealth=100;
+	ptr->mLifetime= 3.0f;
+	ptr->SetPos(enemy->mPos);
+	ptr->mPos.y+=1;
+	ptr->mVelocity =  mPlayer.mPos - enemy->mPos;
+	ptr->mScale=0.4f;
+}
+
+void MyApp::FireCluster()
+{
+	/*
+	Bullet* ptr = FindDeadNode(mBullets);
+	if(ptr== nullptr)return;
+	*/
+
+	//float rot = 40;
+	ISound* clustershot = sfxEngine->play2D("../Content/Sounds/Shotgun.mp3",false);
+	ISound* missleLaunch = sfxEngine->play2D("../Content/Sounds/Missile-Launch.mp3",false);
+	float rot = -70;
+	for(int i = 0; i < mClusters.size(); i++)
+	{
+		//float rot = randf(-40, 40);
+		Bullet* ptr = mClusters[i];
+		ptr->mHealth=100;
+		ptr->mLifetime= 2.9f;
+		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,3,-0.8f)));
+		//ptr->Yaw(mPlayer.GetHpr().z);
+		ptr->SetHpr(mPlayer.GetHpr().x, 0, XMConvertToRadians(rot + i*20));
+		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
+		ptr->mScale=0.6f;
+	}
+	mEnergy-=10;
+	engine->setSoundVolume(mVolume);
+}
+void MyApp::DisplayClusterAoE()
+{
+	for(int i = 0; i < mClusterAoE.size(); i++)
+	{
+		float rot = 360 / mClusterAoE.size() * i;
+		Bullet* ptr = mClusterAoE[i];
+		ptr->mLifetime = 5.0f;
+		ptr->mHealth = 100;
+		ptr->SetHpr(rot,0,0);
+		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,0,10)) + mClusterAoE[i]->RotateVector(Vector3(0,0,3)));
+		ptr->mPos.y = mpTerrain->GetHeight(mClusterAoE[i]->mPos.x, mClusterAoE[i]->mPos.z) + 0.2f;
+		ptr->mScale = 0.5f;
+	}
+}
+void MyApp::CheckEnemyCollisions()
+{
+	for(int b = 0;b<mBullets.size();b++)
+	{
+		if(mBullets[b]->IsAlive()==false) continue;
+		
+		BoundingBox bb = mBullets[b]->GetBox();
+
+		for(int t = 0;t < mEnemies.size();t++)
+		{
+			if(mEnemies[t]->IsAlive()==false)continue;
+
+			if(bb.Intersects(mEnemies[t]->GetBox()))
+			{
+				mBullets[b]->Kill();
+				mEnemies[t]->mHealth-=25;
+				mScore += 10;
+
+				if(mEnemies[t]->mHealth <= 0)
+				{
+					mScore += 20;
+				}
+			}
+		}
+	}
+
+	if(mClusterActive)
+	{
+		for(int c = 0; c < mClusters.size(); c++)
+		{
+			if(mClusters[c]->IsAlive()==false) continue;
+		
+			BoundingBox bb = mClusters[c]->GetBox();
+
+			for(int t = 0;t < mEnemies.size();t++)
+			{
+				if(mEnemies[t]->IsAlive()==false)continue;
+
+				if(bb.Intersects(mEnemies[t]->GetBox()))
+				{
+					mBullets[c]->Kill();
+					mEnemies[t]->mHealth-=25;
+
+					// prevent player from overscoring
+					if(mEnemies[t]->mHealth >= 0)
+						mScore += 10;
+				}
+			}
+		}
+	}
+}
+void MyApp::CheckPlayerCollisions()
+{
+	for(int b = 0;b<mEnemyBullets.size();b++)
+	{
+		if(mEnemyBullets[b]->IsAlive()==false) continue;
+		
+		BoundingBox bb = mEnemyBullets[b]->GetBox();
+
+		if(bb.Intersects(mPlayer.GetBox()))
+		{
+			mEnemyBullets[b]->Kill();
+			mRecoverDelay = 0;
+			sfxEngine->play2D("../Content/Sounds/Body_Hit_11.wav",false);
+			mEnergy -= 5;
+			//mPlayer.mHealth -= 25;
+		}
+	}
+}
+#pragma endregion
 
 void MyApp::Shutdown()
 {
@@ -1168,6 +1228,7 @@ void MyApp::Shutdown()
 	DeleteAllNodes(mEnemyBullets);
 	DeleteAllNodes(mClusterAoE);
 	DeleteAllNodes(mBarracks);
+	DeleteAllNodes(mTrees);
 	engine->drop();
 	sfxEngine->drop();
 }
