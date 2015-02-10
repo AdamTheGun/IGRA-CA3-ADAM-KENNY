@@ -368,7 +368,7 @@ void MyApp::CheckPlayerCollisions()
 void MyApp::Startup()
 {
 	// set the title (needs the L"..." because of Unicode)
-	mTitle=L"Task 11: BUILDING";
+	mTitle=L"Mech-allion";
 
 	ShowCursor(false);
 	mCentreOfScreen = Vector2(GetWindowRect().right / 2,GetWindowRect().bottom / 2);
