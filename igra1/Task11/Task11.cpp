@@ -125,11 +125,12 @@ class MyApp:public App
 	//Temp Variables
 	float mHealth;
 	float mEnergy;
-	int mScore;
+	int mScore,mhighScore;
 	float mRecoverDelay;
 	float mSpawnDelay;
 	float mEnergyBlink, mAlphaModifier;
 
+	bool isBoom;
 	float mClusterActive, mClusterTimer, mClusterArmed;
 
 	float mTextBlinker;
@@ -138,7 +139,7 @@ class MyApp:public App
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont,mpSpriteFont16;
- 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText;
+ 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText,mpEsc2Quit;
 
 	std::vector<Vector3> mSpawnLocations;
 
@@ -378,6 +379,8 @@ void MyApp::Startup()
 	engine->setSoundVolume(mVolume);
 	sfxEngine->setSoundVolume(0.2f);
 
+	
+
 	// initial pos/tgt for camera
 	//mCamera.Reset();
 
@@ -522,9 +525,11 @@ void MyApp::Startup()
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
 	mpSpriteFont.reset(new SpriteFont(GetDevice(),L"../Content/Times12.sprfont"));
 	mpSpriteFont16.reset(new SpriteFont(GetDevice(),L"../Content/Times16.sprfont"));
+
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 	mpGameOverScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Game-Over.jpg");
 	mpGameOverText = CreateTextureResourceWIC(GetDevice(),L"../Content/GameOver_Text.jpg");
+	mpEsc2Quit = CreateTextureResourceWIC(GetDevice(),L"../Content/Esc2Quit.jpg");
 
 	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
@@ -706,6 +711,11 @@ void MyApp::Draw()
 		float flash=((sinf(Timer::GetTime()*2)+1)/2)+0.4f;
 
 		mpSpriteBatch->Draw(mpGameOverText,XMFLOAT2(mSize.right/2,(mSize.bottom/3)*2-50),rec2,DirectX::Colors::White*flash,0.0f,XMFLOAT2(350,35),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+
+		rec.right = 400;
+		rec.bottom = 70;
+
+		mpSpriteBatch->Draw(mpEsc2Quit,XMFLOAT2(mSize.right/2,(mSize.bottom/3)*2+20),rec2,DirectX::Colors::White,0.0f,XMFLOAT2(200,35),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 		mpSpriteBatch->End();
 
 		mTextBlinker = ((sin(mTextBlinker)+1)/2);
@@ -797,7 +807,6 @@ void MyApp::Update()
 			if(Input::KeyDown(VK_UP))
 				mEnergy++;
 		}
-		mEnergy = 0;
 		if(mEnergy>=0)
 		{
 			if(Input::KeyDown(VK_DOWN))
@@ -838,6 +847,8 @@ void MyApp::Update()
 				mEnergy += 4 * Timer::GetDeltaTime();
 			}
 		}
+
+		isBoom = false;
 
 		if(mClusterActive == false)
 		{
@@ -1066,10 +1077,18 @@ void MyApp::Update()
 	else
 	{
 		engine->stopAllSounds();
+		if(mhighScore<mScore)
+		{
+			mhighScore = mScore;
+		}
+		if(!isBoom)
+		{
+			ISound* missleHit = sfxEngine->play2D("../Content/Sounds/Missile-Hit.mp3",false);
+			isBoom = true;
+		}
 		if(Input::KeyPress(VK_ESCAPE))
 		{
-			
-		
+			CloseWin();
 		}
 		if(Input::KeyPress(0x52))
 		{
