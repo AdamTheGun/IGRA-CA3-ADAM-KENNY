@@ -23,7 +23,7 @@ ID3D11Buffer* CreateVertexBuffer(ID3D11Device* pDev, const void* data,unsigned d
 	// to create to VB we need a couple of structs filled
 	D3D11_BUFFER_DESC buffDesc;
 	ZeroMemory(&buffDesc, sizeof(buffDesc)); // clear it
-	buffDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	buffDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
 	buffDesc.ByteWidth = dataBytes;
 	buffDesc.Usage = D3D11_USAGE_DEFAULT;
 	

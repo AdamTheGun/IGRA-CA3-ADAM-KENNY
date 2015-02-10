@@ -85,6 +85,7 @@ class MyApp:public App
 	void FireEnemyShot(Enemy*);
 	void FireCluster();
 	void DisplayClusterAoE();
+	void PlayerCollision();
 	void CheckPlayerCollisions(); // Check whether player get shot
 	void CheckEnemyCollisions(); // check whether enemy get shot
 	void DeployEnemy(int);
@@ -100,7 +101,7 @@ class MyApp:public App
 	std::unique_ptr<PrimitiveBatch<ColouredVertex>> mpDraw3D;
 
 	CComPtr<ID3D11ShaderResourceView> mpCubemap;
-	ModelObj mRobot,mPlane,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj, mTreeObj;
+	ModelObj mRobot,mSkyObj,mBarracksObj,mYellowBallObj,mEnemyObj, mTreeObj;
 	void DrawShadows(const Matrix& view,const Matrix& proj);
 	BasicMaterial mShadowMaterial;
 	CComPtr<ID3D11DepthStencilState> mpShadowStencil;
@@ -131,6 +132,9 @@ class MyApp:public App
 	float mSpawnDelay;
 	float mEnergyBlink, mAlphaModifier;
 
+	float mPlayerDamage;
+	float mAIDamage;
+
 	bool isBoom;
 	float mClusterActive, mClusterTimer, mClusterArmed;
 
@@ -141,11 +145,13 @@ class MyApp:public App
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 
 	std::unique_ptr<SpriteFont> mpSpriteFont,mpVikingFont72;
- 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText,mpEsc2Quit;
+ 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText,mpEsc2Quit, mpGameWinScreen;
 
 	std::vector<Vector3> mSpawnLocations;
 
 	std::wstring strClusterCD, strCluster;
+
+	bool mEndGameCond;
 
 	public :
 		std::unique_ptr<Terrain> mpTerrain;
@@ -201,7 +207,6 @@ void MyApp::Startup()
                          true);
 	mBarracksObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/Barracks.obj",
                          true);
-	mPlane.Load(GetDevice(),mpShaderManager.get(),L"../Content/plane.obj",true);
 	mSkyObj.Load(GetDevice(),mpShaderManager.get(),
                                L"../Content/skyball.obj",false);
 	mYellowBallObj.Load(GetDevice(),mpShaderManager.get(),L"../Content/yellow_ball.obj");
@@ -333,6 +338,9 @@ void MyApp::Startup()
 	mClusterArmed = false;
 	mClusterTimer = 0;
 
+	mPlayerDamage = 25;
+	mAIDamage = 2;
+
 	mDiagnostics = false;
 
 	mpSpriteBatch.reset(new SpriteBatch(GetContext()));
@@ -344,6 +352,7 @@ void MyApp::Startup()
 	mpGameOverScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Game-Over.jpg");
 	mpGameOverText = CreateTextureResourceWIC(GetDevice(),L"../Content/GameOver_Text.jpg");
 	mpEsc2Quit = CreateTextureResourceWIC(GetDevice(),L"../Content/Esc2Quit.jpg");
+	mpGameWinScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Win-Screen.jpg");
 
 	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
@@ -369,6 +378,8 @@ void MyApp::Startup()
 
 	SetupBarracks();
 	SetupTrees();
+
+	mEndGameCond = false;
 }
 void MyApp::Draw()
 {
@@ -411,111 +422,106 @@ void MyApp::Draw()
 	
 	if(mEnergy>0.0f)
 	{
-
-	world= Matrix::CreateTranslation(mCamera.GetPos());
-	mSkyObj.mMaterial.FillMatrixes(world,view,proj);
-	mSkyObj.mMaterial.Apply(GetContext());
-	mSkyObj.Draw(GetContext());
-	// the models:
-	world=Matrix::CreateTranslation(0,0,0);
-	mPlane.mMaterial.FillMatrixes(world,view,proj);
-	mPlane.mMaterial.Apply(GetContext());
-	mPlane.Draw(GetContext());
+		world= Matrix::CreateTranslation(mCamera.GetPos());
+		mSkyObj.mMaterial.FillMatrixes(world,view,proj);
+		mSkyObj.mMaterial.Apply(GetContext());
+		mSkyObj.Draw(GetContext());
+		// the models:
 	
-	GetContext()->OMSetDepthStencilState(nullptr,0);
+		GetContext()->OMSetDepthStencilState(nullptr,0);
 
-	world= Matrix::CreateTranslation(0,0,0);
-	mTerrainMat.FillMatrixes(world,view,proj);
-	mTerrainMat.Apply(GetContext());
-	mpTerrain->Draw(GetContext());
-	//mpTerrain->Draw(GetContext());
+		world= Matrix::CreateTranslation(0,0,0);
+		mTerrainMat.FillMatrixes(world,view,proj);
+		mTerrainMat.Apply(GetContext());
+		mpTerrain->Draw(GetContext());
+		//mpTerrain->Draw(GetContext());
 
-	//for(unsigned i = 0;i<mSpawnLocations.size();i++)
-	//{
-		/*world= Matrix::CreateScale(0.2f) * Matrix::CreateTranslation(mSpawnLocations[i] + Vector3(0,2,0));
-		mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
-		mBarracksObj.mMaterial.Apply(GetContext());
-		mBarracksObj.Draw(GetContext());*/
-	//}
+		//for(unsigned i = 0;i<mSpawnLocations.size();i++)
+		//{
+			/*world= Matrix::CreateScale(0.2f) * Matrix::CreateTranslation(mSpawnLocations[i] + Vector3(0,2,0));
+			mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
+			mBarracksObj.mMaterial.Apply(GetContext());
+			mBarracksObj.Draw(GetContext());*/
+		//}
 	
 	
-	//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
-	//mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
-	//mBarracksObj.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
-	//mBarracksObj.mMaterial.Apply(GetContext());
-	//mBarracksObj.Draw(GetContext());
+		//world=Matrix::CreateTranslation(0,0,0) * Matrix::CreateScale(0.1f);
+		//mBarracksObj.mMaterial.FillMatrixes(world,view,proj);
+		//mBarracksObj.mMaterial.mLights.gEyePosW=mCamera.GetCamPos();
+		//mBarracksObj.mMaterial.Apply(GetContext());
+		//mBarracksObj.Draw(GetContext());
 
-	/*world=Matrix::CreateTranslation(mPlayerPos.x,mPlayerPos.y,mPlayerPos.z) * Matrix::CreateScale(0.1f);
-	mPlayer.mMaterial.FillMatrixes(world,view,proj);
-	mPlayer.mMaterial.mLights.gEyePosW=mCamera.GetPos();
-	mPlayer.mMaterial.Apply(GetContext());*/
-	// EXTRA: add the cubemap as T1
-	ID3D11ShaderResourceView* tex[]={mpCubemap};
-	GetContext()->PSSetShaderResources(1,1,tex);	// set as index T1
-	mPlayer.Draw(GetContext(),view,proj);
-	mPlayer.mHealth = 1000;
-	mPlayer.mScale = 0.1f;
-	//DrawShadows(view,proj);
-	// draw sky
-	// Present the backbuffer to the screen
+		/*world=Matrix::CreateTranslation(mPlayerPos.x,mPlayerPos.y,mPlayerPos.z) * Matrix::CreateScale(0.1f);
+		mPlayer.mMaterial.FillMatrixes(world,view,proj);
+		mPlayer.mMaterial.mLights.gEyePosW=mCamera.GetPos();
+		mPlayer.mMaterial.Apply(GetContext());*/
+		// EXTRA: add the cubemap as T1
+		ID3D11ShaderResourceView* tex[]={mpCubemap};
+		GetContext()->PSSetShaderResources(1,1,tex);	// set as index T1
+		mPlayer.Draw(GetContext(),view,proj);
+		mPlayer.mHealth = 1000;
+		mPlayer.mScale = 0.1f;
+		//DrawShadows(view,proj);
+		// draw sky
+		// Present the backbuffer to the screen
 
-	DrawAliveNodes(mBullets,GetContext(),view,proj);
-	DrawAliveNodes(mEnemyBullets,GetContext(),view,proj);
-	DrawAliveNodes(mClusters,GetContext(),view,proj);
-	DrawAliveNodes(mClusterAoE,GetContext(),view,proj);
-	DrawAliveNodes(mEnemies,GetContext(),view,proj);
-	DrawAliveNodes(mBarracks,GetContext(),view,proj);
-	DrawAliveNodes(mTrees,GetContext(),view,proj);
+		DrawAliveNodes(mBullets,GetContext(),view,proj);
+		DrawAliveNodes(mEnemyBullets,GetContext(),view,proj);
+		DrawAliveNodes(mClusters,GetContext(),view,proj);
+		DrawAliveNodes(mClusterAoE,GetContext(),view,proj);
+		DrawAliveNodes(mEnemies,GetContext(),view,proj);
+		DrawAliveNodes(mBarracks,GetContext(),view,proj);
+		DrawAliveNodes(mTrees,GetContext(),view,proj);
 	
-	if(mDiagnostics)
-	{
-		Draw3DPrepare(GetContext(),mpShaderManager.get(),view,proj);
-		mpDraw3D->Begin();
-		//DrawAliveNodeBounds(mBullets,mpDraw3D.get(),Colors::Green);
-		DrawAliveNodeBounds(mEnemies,mpDraw3D.get(),Colors::Red);
-		DrawAliveNodeBounds(mTrees,mpDraw3D.get(),Colors::Yellow);
-		Draw3DBoundingBox(mpDraw3D.get(),mPlayer.GetBox(),Colors::White);
-		mpDraw3D->End();
-	}
+		if(mDiagnostics)
+		{
+			Draw3DPrepare(GetContext(),mpShaderManager.get(),view,proj);
+			mpDraw3D->Begin();
+			//DrawAliveNodeBounds(mBullets,mpDraw3D.get(),Colors::Green);
+			DrawAliveNodeBounds(mEnemies,mpDraw3D.get(),Colors::Red);
+			DrawAliveNodeBounds(mTrees,mpDraw3D.get(),Colors::Yellow);
+			Draw3DBoundingBox(mpDraw3D.get(),mPlayer.GetBox(),Colors::White);
+			mpDraw3D->End();
+		}
 
-	GetContext()->OMSetDepthStencilState(
-                            mpShaderManager->CommonStates()->DepthDefault(),0);
-	//XMMATRIX matrix = XMMATRIX(mEnergy/10,0,0,0,0,1,0,0,0,0,1,0,-1,1,0,1);
+		GetContext()->OMSetDepthStencilState(
+								mpShaderManager->CommonStates()->DepthDefault(),0);
+		//XMMATRIX matrix = XMMATRIX(mEnergy/10,0,0,0,0,1,0,0,0,0,1,0,-1,1,0,1);
 
-	RECT rec;
-	rec.left = 50;
-	rec.top = 50;
-	rec.right = 400;
-	rec.bottom = 75;
+		RECT rec;
+		rec.left = 50;
+		rec.top = 50;
+		rec.right = 400;
+		rec.bottom = 75;
 
-	const RECT* rect = &rec;
+		const RECT* rect = &rec;
 
-	if(mClusterArmed)
-	{
-		strCluster=L"Cluster: Armed";
-	}
-	else
-	{
-		strCluster=L"Cluster: Active";
-		strClusterCD=L"";
-	}
+		if(mClusterArmed)
+		{
+			strCluster=L"Cluster: Armed";
+		}
+		else
+		{
+			strCluster=L"Cluster: Active";
+			strClusterCD=L"";
+		}
 
-	if(mClusterActive)
-	{
-		strCluster=L"Cluster: Recharging";
-		strClusterCD = ToString("Cooldown: ", (int)(4 - mClusterTimer));
-	}
+		if(mClusterActive)
+		{
+			strCluster=L"Cluster: Recharging";
+			strClusterCD = ToString("Cooldown: ", (int)(4 - mClusterTimer));
+		}
 
-	mpSpriteBatch->Begin();
-	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
-	std::wstring scoreStr = ToString("Score: ", mScore);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 260, 35),Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 261, 37),Colors::White);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(40, 60),Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(41, 62),Colors::White);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(40, 80),Colors::Black);
-	mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(41, 82),Colors::White);
-	mpSpriteBatch->End();
+		mpSpriteBatch->Begin();
+		mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		std::wstring scoreStr = ToString("Score: ", mScore);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 260, 35),Colors::Black);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 261, 37),Colors::White);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(40, 60),Colors::Black);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(41, 62),Colors::White);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(40, 80),Colors::Black);
+		mpSpriteFont->DrawString(mpSpriteBatch.get(),strClusterCD.c_str(),Vector2(41, 82),Colors::White);
+		mpSpriteBatch->End();
 	}
 	else
 	{
@@ -530,7 +536,14 @@ void MyApp::Draw()
 		const RECT* rec1 = &rec;
 
 		mpSpriteBatch->Begin();
-		mpSpriteBatch->Draw(mpGameOverScreen,XMFLOAT2(0,0),rec1,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		if(mEndGameCond)
+		{
+			mpSpriteBatch->Draw(mpGameWinScreen,XMFLOAT2(0,0),rec1,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		}
+		else
+		{
+			mpSpriteBatch->Draw(mpGameOverScreen,XMFLOAT2(0,0),rec1,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+		}
 
 		rec.bottom = 70;
 		rec.right = 700;
@@ -634,12 +647,12 @@ void MyApp::Update()
 	if (Input::KeyPress(VK_ESCAPE))
 		CloseWin();
 
-	if(Input::KeyPress(VK_TAB))
-		mDiagnostics = !mDiagnostics;
+	/*if(Input::KeyPress(VK_TAB))
+		mDiagnostics = !mDiagnostics;*/
 
 	if(mEnergy>0.0f){
 	#pragma region Player Shooting Functions & Effects
-		if(mEnergy<=100.0f){
+		/*if(mEnergy<=100.0f){
 			if(Input::KeyDown(VK_UP))
 				mEnergy++;
 		}
@@ -647,7 +660,7 @@ void MyApp::Update()
 		{
 			if(Input::KeyDown(VK_DOWN))
 				mEnergy--;
-		}
+		}*/
 		if(Input::KeyPress(VK_LBUTTON))
 		{
 			// Shoot regular bullet
@@ -728,7 +741,7 @@ void MyApp::Update()
 					//mClusters[i]->LookAt(Vector3(0, 0, randZ));
 					//mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 20));
 					mClusters[i]->SetHpr(mClusters[i]->GetHpr().x, 0, 0);
-					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 15));
+					mClusters[i]->mVelocity = mClusters[i]->RotateVector(Vector3(randX, randY, 30));
 				}
 			}
 		
@@ -779,11 +792,6 @@ void MyApp::Update()
 			mCurrentCamAngle = mBackAngle;
 		}
 	#pragma endregion
-	
-		if(Input::KeyPress(VK_UP))
-		{
-			//DeployEnemy();
-		}
 
 		for(unsigned i =0;i<mSpawnLocations.size();i++ )
 		{
@@ -799,7 +807,8 @@ void MyApp::Update()
 				}
 				if(mSpawnDelay==0.0f)
 				{
-					DeployEnemy(i);
+					if(mBarracks[i]->IsAlive() == true)
+						DeployEnemy(i);
 				}
 			}
 		}
@@ -903,12 +912,52 @@ void MyApp::Update()
 		if(mPlayer.mPos.y > maxHeight)
 			mPlayer.Move(-move*MOVE_SPEED*Timer::GetDeltaTime());
 
+		PlayerCollision();
+
 		mPlayer.Turn(turn*TURN_SPEED*Timer::GetDeltaTime());
 
 		mCamera.SetPos(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamMode));
 		mCamera.LookAt(mPlayer.GetPos() + mPlayer.RotateVector(mCurrentCamAngle));
 		//mCamera.LookAt(Vector3(0,0,3));
 		//mCamera.Update();
+
+		//// END GAME CONDITION
+		// Check if everything except trees are destroyed
+		for(int e = 0; e < mEnemies.size(); e++)
+		{
+			if(mEnemies[e]->IsAlive() == true)
+			{
+				mEndGameCond = false;
+				break;
+			}
+			else
+			{
+				mEndGameCond = true;
+			}
+		}
+
+		if(mEndGameCond)
+		{
+			for(int b = 0; b < mBarracks.size(); b++)
+			{
+				if(mBarracks[b]->IsAlive() == true)
+				{
+					mEndGameCond = false;
+					break;
+				}
+				else
+				{
+					mEndGameCond = true;
+				}
+			}
+
+			// Player wins
+			if(mEndGameCond == true)
+			{
+				mEnergy = 0;
+			}
+		}
+		////
 	}
 	else
 	{
@@ -937,6 +986,7 @@ void MyApp::Update()
 void MyApp::Restart()
 {
 	mEnergy = 100.0f;
+	mScore = 0;
 	for(unsigned i =0;i<mBullets.size();i++)
 	{
 		mBullets[i]->Kill();
@@ -965,6 +1015,14 @@ void MyApp::Restart()
 	{
 		mTrees[i]->Kill();
 	}
+
+	mSpawnLocations.clear();
+	mSpawnLocations.push_back(Vector3(-100,mpTerrain->GetHeight(-100,10),10));
+	mSpawnLocations.push_back(Vector3(-10,mpTerrain->GetHeight(-10,-100),-100));
+	mSpawnLocations.push_back(Vector3(85,mpTerrain->GetHeight(85,-30),-30));
+	mSpawnLocations.push_back(Vector3(90,mpTerrain->GetHeight(90,90),90));
+	mSpawnLocations.push_back(Vector3(-60,mpTerrain->GetHeight(-60,60),60));
+
 	SetupBarracks();
 	SetupTrees();
 	mPlayer.SetPos(Vector3(-80,0,-100));
@@ -1044,7 +1102,7 @@ void MyApp::SetupBarracks()
 
 		ptr->mHealth = 500.0f;
 		ptr->mScale = 0.18f;
-		ptr->SetPos(mSpawnLocations[i] + Vector3(0,1.96f,0));
+		ptr->SetPos(mSpawnLocations[i] + Vector3(0,1,0));
 	}
 }
 void MyApp::SetupTrees()
@@ -1084,6 +1142,8 @@ void MyApp::FireShot()
 {
 	Bullet* ptr = FindDeadNode(mBullets);
 	if(ptr== nullptr)return;
+	sfxEngine->setSoundVolume(0.2f);
+	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
 	
 	mEnergy--;
 	ptr->mHealth=100;
@@ -1144,19 +1204,63 @@ void MyApp::DisplayClusterAoE()
 		ptr->mLifetime = 5.0f;
 		ptr->mHealth = 100;
 		ptr->SetHpr(rot,0,0);
-		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,0,10)) + mClusterAoE[i]->RotateVector(Vector3(0,0,3)));
+		ptr->SetPos(mPlayer.GetPos() + mPlayer.RotateVector(Vector3(0,0,15)) + mClusterAoE[i]->RotateVector(Vector3(0,0,3)));
 		ptr->mPos.y = mpTerrain->GetHeight(mClusterAoE[i]->mPos.x, mClusterAoE[i]->mPos.z) + 0.2f;
 		ptr->mScale = 0.5f;
 	}
 }
+void MyApp::PlayerCollision()
+{
+	for(int i = 0; i < mEnemies.size(); i++)
+	{
+		if(mEnemies[i]->IsAlive()==false) continue;
+
+		BoundingBox bb = mEnemies[i]->GetBox();
+
+		if(bb.Intersects(mPlayer.GetBox()))
+		{
+			mEnemies[i]->Kill();
+			mScore += 10;
+		}
+	}
+
+	for(int i = 0; i < mBarracks.size(); i++)
+	{
+		if(mBarracks[i]->IsAlive()==false) continue;
+
+		BoundingBox bb = mBarracks[i]->GetBox();
+
+		if(bb.Intersects(mPlayer.GetBox()))
+		{
+			mBarracks[i]->Kill();
+			//mSpawnLocations.erase(mSpawnLocations.begin() + i);
+			mScore += 20;
+		}
+	}
+
+	for(int i = 0; i < mTrees.size(); i++)
+	{
+		if(mTrees[i]->IsAlive()==false) continue;
+
+		BoundingBox bb = mTrees[i]->GetBox();
+
+		if(bb.Intersects(mPlayer.GetBox()))
+		{
+			mTrees[i]->Kill();
+			mScore += 1;
+		}
+	}
+}
 void MyApp::CheckEnemyCollisions()
 {
+	// Regular bullet
 	for(int b = 0;b<mBullets.size();b++)
 	{
 		if(mBullets[b]->IsAlive()==false) continue;
 		
 		BoundingBox bb = mBullets[b]->GetBox();
-
+		
+		// Enemies
 		for(int t = 0;t < mEnemies.size();t++)
 		{
 			if(mEnemies[t]->IsAlive()==false)continue;
@@ -1164,7 +1268,7 @@ void MyApp::CheckEnemyCollisions()
 			if(bb.Intersects(mEnemies[t]->GetBox()))
 			{
 				mBullets[b]->Kill();
-				mEnemies[t]->mHealth-=25;
+				mEnemies[t]->mHealth-=mPlayerDamage;
 				mScore += 10;
 
 				if(mEnemies[t]->mHealth <= 0)
@@ -1173,8 +1277,47 @@ void MyApp::CheckEnemyCollisions()
 				}
 			}
 		}
+
+		// Barracks
+		for(int t = 0;t < mBarracks.size();t++)
+		{
+			if(mBarracks[t]->IsAlive()==false)continue;
+
+			if(bb.Intersects(mBarracks[t]->GetBox()))
+			{
+				mBullets[b]->Kill();
+				mBarracks[t]->mHealth-=mPlayerDamage;
+				mScore += 20;
+
+				if(mBarracks[t]->mHealth <= 0)
+				{
+					mScore += 100;
+					mBarracks[t]->Kill();
+					//mSpawnLocations.erase(mSpawnLocations.begin() + t);
+				}
+			}
+		}
+
+		// Trees
+		for(int t = 0;t < mTrees.size();t++)
+		{
+			if(mTrees[t]->IsAlive()==false)continue;
+
+			if(bb.Intersects(mTrees[t]->GetBox()))
+			{
+				mBullets[b]->Kill();
+				mTrees[t]->mHealth-=mPlayerDamage;
+				mScore += 1;
+
+				if(mTrees[t]->mHealth <= 0)
+				{
+					mScore += 5;
+				}
+			}
+		}
 	}
 
+	// Cluster
 	if(mClusterActive)
 	{
 		for(int c = 0; c < mClusters.size(); c++)
@@ -1183,23 +1326,69 @@ void MyApp::CheckEnemyCollisions()
 		
 			BoundingBox bb = mClusters[c]->GetBox();
 
+			// Enemies
 			for(int t = 0;t < mEnemies.size();t++)
 			{
 				if(mEnemies[t]->IsAlive()==false)continue;
 
 				if(bb.Intersects(mEnemies[t]->GetBox()))
 				{
-					mBullets[c]->Kill();
+					mClusters[c]->Kill();
 					mEnemies[t]->mHealth-=25;
 
 					// prevent player from overscoring
 					if(mEnemies[t]->mHealth >= 0)
 						mScore += 10;
+
+					if(mEnemies[t] <= 0)
+						mEnemies[t]->Kill();
+				}
+			}
+
+			// Barracks
+			for(int t = 0;t < mBarracks.size();t++)
+			{
+				if(mBarracks[t]->IsAlive()==false)continue;
+
+				if(bb.Intersects(mBarracks[t]->GetBox()))
+				{
+					mClusters[c]->Kill();
+					mBarracks[t]->mHealth-=mPlayerDamage;
+
+					// prevent player from overscoring
+					if(mBarracks[t]->mHealth >= 0)
+						mScore += 20;
+
+					if(mBarracks[t]->mHealth <= 0)
+					{
+						mBarracks[t]->Kill();
+						//mSpawnLocations.erase(mSpawnLocations.begin() + t);
+					}
+				}
+			}
+
+			// Trees
+			for(int t = 0;t < mTrees.size();t++)
+			{
+				if(mTrees[t]->IsAlive()==false)continue;
+
+				if(bb.Intersects(mTrees[t]->GetBox()))
+				{
+					mClusters[c]->Kill();
+					mTrees[t]->mHealth-=mPlayerDamage;
+
+					// prevent player from overscoring
+					if(mTrees[t]->mHealth >= 0)
+						mScore += 1;
+
+					if(mTrees[t]->mHealth <= 0)
+						mTrees[t]->Kill();
 				}
 			}
 		}
 	}
 }
+
 void MyApp::CheckPlayerCollisions()
 {
 	for(int b = 0;b<mEnemyBullets.size();b++)

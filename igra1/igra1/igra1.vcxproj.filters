@@ -160,9 +160,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\Task04\Shaders\LightHelper.hlsli">
-      <Filter>Shaders</Filter>
-    </None>
     <None Include="Terrain.hlsli">
       <Filter>Shaders</Filter>
     </None>
@@ -175,17 +172,11 @@
     <None Include="irrKlang.exp">
       <Filter>Header Files\irrKlang</Filter>
     </None>
+    <None Include="LightHelper.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="..\Task04\Shaders\PS_Coloured.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="..\Task04\Shaders\VS_Coloured.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
-    <FxCompile Include="..\Task04\Shaders\VS_Coloured3D.hlsl">
-      <Filter>Shaders</Filter>
-    </FxCompile>
     <FxCompile Include="VS_default.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -211,6 +202,18 @@
       <Filter>Shaders</Filter>
     </FxCompile>
     <FxCompile Include="PS_skybox.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VS_Coloured.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VS_Coloured3D.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="PS_Coloured.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="VertexShader.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
   </ItemGroup>
