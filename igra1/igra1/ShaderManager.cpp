@@ -215,18 +215,18 @@ void BasicMaterial::SetupDefaultLights()
 {
 
 	ZeroMemory(&mLights,sizeof(mLights));
-	mLights.gDirLights[0].Ambient  = Color(0.2f, 0.2f, 0.2f, 1.0f);
-	mLights.gDirLights[0].Diffuse  = Color(0.5f, 0.5f, 0.5f, 1.0f);
+	mLights.gDirLights[0].Ambient  = Color(0.3f, 0.3f, 0.3f, 1.0f);
+	mLights.gDirLights[0].Diffuse  = Color(0.9f, 0.9f, 0.9f, 1.0f);
 	mLights.gDirLights[0].Specular = Color(0.3f, 0.3f, 0.3f, 1.0f);
 	mLights.gDirLights[0].Direction = Vector3(0.57735f, -0.97735f, 0.57735f);
 
-	mLights.gDirLights[1].Ambient  = Color(0.0f, 0.0f, 0.0f, 1.0f);
-	mLights.gDirLights[1].Diffuse  = Color(0.20f, 0.20f, 0.20f, 1.0f);
+	mLights.gDirLights[1].Ambient  = Color(0.3f, 0.3f, 0.3f, 1.0f);
+	mLights.gDirLights[1].Diffuse  = Color(0.90f, 0.90f, 0.90f, 1.0f);
 	mLights.gDirLights[1].Specular = Color(0.15f, 0.15f, 0.15f, 1.0f);
 	mLights.gDirLights[1].Direction = Vector3(-0.57735f, -0.57735f,0.57735f);
 
-	mLights.gDirLights[2].Ambient  = Color(0.0f, 0.0f, 0.0f, 1.0f);
-	mLights.gDirLights[2].Diffuse  = Color(0.2f, 0.2f, 0.2f, 1.0f);
+	mLights.gDirLights[2].Ambient  = Color(0.3f, 0.3f, 0.3f, 1.0f);
+	mLights.gDirLights[2].Diffuse  = Color(0.9f, 0.9f, 0.9f, 1.0f);
 	mLights.gDirLights[2].Specular = Color(0.0f, 0.0f, 0.0f, 1.0f);
 	mLights.gDirLights[2].Direction = Vector3(0.0f, -0.707f, -0.707f);
 

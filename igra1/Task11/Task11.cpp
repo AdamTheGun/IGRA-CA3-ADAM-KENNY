@@ -132,11 +132,13 @@ class MyApp:public App
 
 	float mClusterActive, mClusterTimer, mClusterArmed;
 
+	float mTextBlinker;
+
 	TerrainMaterial mTerrainMat;
 
 	std::unique_ptr<SpriteBatch> mpSpriteBatch;
 	std::unique_ptr<SpriteFont> mpSpriteFont,mpSpriteFont16;
- 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen;
+ 	CComPtr<ID3D11ShaderResourceView> mpTexLifeBar,mpGameOverScreen,mpGameOverText;
 
 	std::vector<Vector3> mSpawnLocations;
 
@@ -216,7 +218,7 @@ void MyApp::SetupBarracks()
 
 		ptr->mHealth = 500.0f;
 		ptr->mScale = 0.18f;
-		ptr->SetPos(mSpawnLocations[i] + Vector3(0,0.6f,0));
+		ptr->SetPos(mSpawnLocations[i] + Vector3(0,1.96f,0));
 	}
 }
 
@@ -237,7 +239,7 @@ void MyApp::FireEnemyShot(Enemy* enemy)
 {
 	Bullet* ptr = FindDeadNode(mEnemyBullets);
 	if(ptr== nullptr)return;
-	
+	sfxEngine->setSoundVolume(0.2f);
 	ISound* shot = sfxEngine->play2D("../Content/Sounds/Body_Hit_31.wav",false);
 
 	//mEnergy--;
@@ -272,6 +274,7 @@ void MyApp::FireCluster()
 		ptr->mVelocity = mClusters[i]->RotateVector(Vector3(0,12,-50 * mClusterTimer));
 		ptr->mScale=0.6f;
 	}
+	mEnergy-=10;
 	engine->setSoundVolume(mVolume);
 }
 void MyApp::DisplayClusterAoE()
@@ -304,6 +307,12 @@ void MyApp::CheckEnemyCollisions()
 			{
 				mBullets[b]->Kill();
 				mEnemies[t]->mHealth-=25;
+				mScore += 10;
+
+				if(mEnemies[t]->mHealth <= 0)
+				{
+					mScore += 20;
+				}
 			}
 		}
 	}
@@ -324,6 +333,8 @@ void MyApp::CheckEnemyCollisions()
 				{
 					mBullets[c]->Kill();
 					mEnemies[t]->mHealth-=25;
+
+					mScore += 10;
 				}
 			}
 		}
@@ -365,7 +376,7 @@ void MyApp::Startup()
 	ISound* music = engine->play2D("../Content/Sounds/Tank.mp3",true);
 	mVolume = 0.1f;
 	engine->setSoundVolume(mVolume);
-	sfxEngine->setSoundVolume(0.8f);
+	sfxEngine->setSoundVolume(0.2f);
 
 	// initial pos/tgt for camera
 	//mCamera.Reset();
@@ -502,6 +513,7 @@ void MyApp::Startup()
 	mScore = 0;
 	mRecoverDelay = 0;
 	mEnergyBlink = 1.0f;
+	mTextBlinker = 1.0f;
 
 	mClusterActive = false;
 	mClusterArmed = false;
@@ -512,6 +524,7 @@ void MyApp::Startup()
 	mpSpriteFont16.reset(new SpriteFont(GetDevice(),L"../Content/Times16.sprfont"));
 	mpTexLifeBar = CreateTextureResourceWIC(GetDevice(),L"../Content/LifeBar.jpg");
 	mpGameOverScreen = CreateTextureResourceWIC(GetDevice(),L"../Content/Game-Over.jpg");
+	mpGameOverText = CreateTextureResourceWIC(GetDevice(),L"../Content/GameOver_Text.jpg");
 
 	mPlayer.Init(&mRobot, Vector3(-80,0,-100));
 	mCamera.Init(Vector3(0,0,0));
@@ -589,7 +602,6 @@ void MyApp::Draw()
 	mPlane.mMaterial.Apply(GetContext());
 	mPlane.Draw(GetContext());
 	
-	
 	GetContext()->OMSetDepthStencilState(nullptr,0);
 
 	world= Matrix::CreateTranslation(0,0,0);
@@ -664,7 +676,7 @@ void MyApp::Draw()
 
 	mpSpriteBatch->Begin();
 	mpSpriteBatch->Draw(mpTexLifeBar,XMFLOAT2(mSize.right/12-40,mSize.bottom/12-30),rect,DirectX::Colors::White * mEnergyBlink,0.0f,XMFLOAT2(0,0),XMFLOAT2((mEnergy/50),1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
-	std::wstring scoreStr = ToString("Score: "+mScore);
+	std::wstring scoreStr = ToString("Score: ", mScore);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 201, 39),Colors::Black);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),scoreStr.c_str(),Vector2(GetWindowRect().right - 200, 40),Colors::White);
 	mpSpriteFont16->DrawString(mpSpriteBatch.get(),strCluster.c_str(),Vector2(50, 60),Colors::Black);
@@ -685,7 +697,45 @@ void MyApp::Draw()
 
 		mpSpriteBatch->Begin();
 		mpSpriteBatch->Draw(mpGameOverScreen,XMFLOAT2(0,0),rec1,DirectX::Colors::White,0.0f,XMFLOAT2(0,0),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
+
+		rec.bottom = 70;
+		rec.right = 700;
+
+		const RECT* rec2 = &rec;
+
+		float flash=((sinf(Timer::GetTime()*2)+1)/2)+0.4f;
+
+		mpSpriteBatch->Draw(mpGameOverText,XMFLOAT2(mSize.right/2,(mSize.bottom/3)*2-50),rec2,DirectX::Colors::White*flash,0.0f,XMFLOAT2(350,35),XMFLOAT2(1,1),DirectX::SpriteEffects::SpriteEffects_None,0.0f);
 		mpSpriteBatch->End();
+
+		mTextBlinker = ((sin(mTextBlinker)+1)/2);
+
+		/*if(mTextBlinker>=0.3f)
+		{
+			if(mTextBlinker<=1.0f)
+			{
+				mTextBlinker += 0.5f*Timer::GetDeltaTime();
+			}
+			else 
+			{
+				mTextBlinker = 0.3f;
+			}
+		}
+		else if(mTextBlinker<=1.0f)
+		{
+			if(mTextBlinker>=0.3f)
+			{
+				mTextBlinker -= 0.5f*Timer::GetDeltaTime();
+			}
+			else 
+			{
+				mTextBlinker = 0.3f;
+			}
+		}
+		else 
+		{
+			mTextBlinker = 0.3f;
+		}*/
 
 	}
 
@@ -747,6 +797,7 @@ void MyApp::Update()
 			if(Input::KeyDown(VK_UP))
 				mEnergy++;
 		}
+		mEnergy = 0;
 		if(mEnergy>=0)
 		{
 			if(Input::KeyDown(VK_DOWN))
@@ -916,7 +967,7 @@ void MyApp::Update()
 		{
 			if(mEnemies[i]->IsAlive())
 			{
-				mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z);
+				mEnemies[i]->mPos.y = mpTerrain->GetHeight(mEnemies[i]->mPos.x,mEnemies[i]->mPos.z) + 1.5f;
 				/*if(mEnemies[i]->mPos.y>maxHeight)
 				{
 					mEnemies[i]->mPos.y = maxHeight;
@@ -995,7 +1046,7 @@ void MyApp::Update()
 		}
 		else
 		{
-			if(mVolume<=0.8f)
+			if(mVolume<=0.6f)
 			{
 				mVolume += 0.1f*Timer::GetDeltaTime();
 			}
@@ -1014,13 +1065,15 @@ void MyApp::Update()
 	}
 	else
 	{
+		engine->stopAllSounds();
 		if(Input::KeyPress(VK_ESCAPE))
 		{
 			
 		
 		}
-		if(Input::KeyPress(VK_LBUTTON))
+		if(Input::KeyPress(0x52))
 		{
+			ISound* UiClick = sfxEngine->play2D("../Content/Sounds/UI_Clicks09.wav",false);
 			Restart();
 		}
 	}
@@ -1035,7 +1088,6 @@ void MyApp::Restart()
 	}
 	for(unsigned i =0;i<mEnemies.size();i++)
 	{
-
 		mEnemies[i]->Kill();
 	}
 	for(unsigned i =0;i<mClusters.size();i++)
@@ -1052,11 +1104,13 @@ void MyApp::Restart()
 	}
 	for(unsigned i =0;i<mBarracks.size();i++)
 	{
-		//mBarracks[i]->Kill();
-		mBarracks[i]->mHealth = 100.0f;
+		mBarracks[i]->Kill();
 	}
+	SetupBarracks();
 	mPlayer.SetPos(Vector3(-80,0,-100));
-
+	ISound* music = engine->play2D("../Content/Sounds/Tank.mp3",true);
+	mVolume = 0.1f;
+	engine->setSoundVolume(mVolume);
 }
 
 void MyApp::Shutdown()
